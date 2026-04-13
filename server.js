@@ -38,44 +38,43 @@ setInterval(() => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ─── Gemini Streaming API endpoint ───
+// ─── Groq Streaming API endpoint ───
 app.post("/api/generate", rateLimit, async (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: "GEMINI_API_KEY not configured in Render environment." });
+    return res.status(500).json({ error: "GROQ_API_KEY not configured in Render environment." });
   }
 
   const { system, messages } = req.body;
-  const userMessage = messages?.[0]?.content || "";
 
-  const geminiBody = {
-    system_instruction: { parts: [{ text: system }] },
-    contents: [{ role: "user", parts: [{ text: userMessage }] }],
-    generationConfig: {
-      maxOutputTokens: 1500,
-      temperature: 0.9,
-    },
+  const groqBody = {
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      { role: "system", content: system },
+      ...messages,
+    ],
+    max_tokens: 1500,
+    temperature: 0.9,
+    stream: true,
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
-
   try {
-    const response = await fetch(url, {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(geminiBody),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(groqBody),
     });
 
     if (!response.ok) {
-      let errMsg = `Gemini API error (${response.status})`;
-      let rawError = "";
+      let errMsg = `API error (${response.status})`;
       try {
         const errData = await response.json();
-        rawError = JSON.stringify(errData);
         errMsg = errData?.error?.message || errMsg;
+        console.error(`Groq error ${response.status}:`, JSON.stringify(errData));
       } catch(e) {}
-
-      console.error(`Gemini error ${response.status}:`, rawError || errMsg);
 
       return res.status(response.status).json({ error: errMsg });
     }
@@ -98,12 +97,12 @@ app.post("/api/generate", rateLimit, async (req, res) => {
 
       for (const line of lines) {
         if (line.startsWith("data: ")) {
-          const jsonStr = line.slice(6);
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
           try {
             const parsed = JSON.parse(jsonStr);
-            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+            const text = parsed?.choices?.[0]?.delta?.content;
             if (text) {
-              // Send in a unified format the frontend understands
               res.write(`data: ${JSON.stringify({ type: "content_block_delta", delta: { text } })}\n\n`);
             }
           } catch(e) {}
@@ -116,7 +115,7 @@ app.post("/api/generate", rateLimit, async (req, res) => {
   } catch (err) {
     console.error("API error:", err);
     if (!res.headersSent) {
-      res.status(500).json({ error: "Failed to reach Gemini API. Please try again." });
+      res.status(500).json({ error: "Failed to reach API. Please try again." });
     } else {
       res.end();
     }
