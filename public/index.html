@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
@@ -10,22 +10,21 @@
   <meta name="description" content="Beast Coaching AI Script Writer" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <title>Beast Scripts</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
-      font-family: 'Tajawal', sans-serif;
+      font-family: 'Inter', sans-serif;
       background: #0a0a0a;
       color: #f0f0f0;
-      direction: rtl;
       min-height: 100vh;
       min-height: -webkit-fill-available;
       overscroll-behavior: none;
     }
     html { height: -webkit-fill-available; }
     textarea::placeholder { color: #555; }
-    button { font-family: 'Tajawal', sans-serif; cursor: pointer; -webkit-appearance: none; }
+    button { font-family: 'Inter', sans-serif; cursor: pointer; -webkit-appearance: none; }
     button:active { transform: scale(0.97) !important; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -37,36 +36,30 @@
     .view-enter { animation: fadeIn 0.35s ease-out; }
     .card-hover:active { transform: scale(0.97); }
 
-    /* Safe areas for iPhone notch */
     .header { padding-top: max(20px, env(safe-area-inset-top)); }
     .bottom-bar { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
     .content { padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom))); }
 
-    /* Toast */
     .toast {
       position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
       background: #222; color: #fff; padding: 10px 24px; border-radius: 20px;
       font-size: 14px; z-index: 999; animation: fadeIn 0.3s ease;
       border: 1px solid #333;
     }
-    .toast.hide { opacity: 0; transition: opacity 0.3s; }
 
-    /* Streaming cursor */
     .streaming-cursor::after {
       content: '|'; animation: pulse 0.8s infinite; color: #FF4500; font-weight: 900;
     }
 
-    /* Editable script area */
     .script-editable {
       background: #141414; border: 1px solid #2a2a2a; border-radius: 16px;
       padding: 20px; margin-bottom: 16px; line-height: 2; font-size: 16px;
       direction: rtl; min-height: 120px; outline: none; color: #f0f0f0;
-      font-family: 'Tajawal', sans-serif; width: 100%; resize: vertical;
+      font-family: 'Inter', 'Tajawal', sans-serif; width: 100%; resize: vertical;
       transition: border-color 0.2s;
     }
     .script-editable:focus { border-color: #FF4500; }
 
-    /* Star button */
     .star-btn { transition: transform 0.2s; }
     .star-btn:active { transform: scale(1.3) !important; }
   </style>
@@ -81,7 +74,7 @@ const BRAND = {
   name: "Beast Coaching",
   coach: "Coach Abdelrahman",
   handle: "@beastcoachingegypt",
-  tagline: "لا مكان للضعف هنا",
+  tagline: "No Place For Weakness",
   systemPrompt: `You are an Arabic motivational script writer for "Beast Coaching by Coach Abdelrahman" (@beastcoachingegypt).
 
 Your writing style:
@@ -101,21 +94,21 @@ Format the script with clear line breaks between sections for video pacing.`
 };
 
 const TEMPLATES = [
-  { id:"wake-up", icon:"⚡", title:"صحيان الفجر", subtitle:"Wake Up Call", prompt:"اكتب سكريبت فيديو تحفيزي قوي عن الصحيان بدري والانضباط الصباحي. أسلوب ديفيد جوجينز. مدة الفيديو دقيقة واحدة.", color:"#FF4500" },
-  { id:"no-excuses", icon:"🔥", title:"مفيش أعذار", subtitle:"No Excuses", prompt:"اكتب سكريبت تحفيزي عن التوقف عن الأعذار والبدء في العمل. خاطب الشخص اللي بيأجل حياته. أسلوب قوي وصادم. مدة دقيقة.", color:"#DC143C" },
-  { id:"pain", icon:"💀", title:"الألم هو الطريق", subtitle:"Embrace The Pain", prompt:"اكتب سكريبت عن احتضان الألم والتعب كوقود للنجاح. اربط بين ألم التمرين وألم الحياة. أسلوب ديفيد جوجينز الخام. مدة دقيقة.", color:"#8B0000" },
-  { id:"haters", icon:"🐺", title:"خلي الكلاب تنبح", subtitle:"Let Them Talk", prompt:"اكتب سكريبت تحفيزي عن تجاهل الكارهين والمنتقدين. كيف تحول كلامهم لوقود. أسلوب واثق وقوي. مدة دقيقة.", color:"#4A0E4E" },
-  { id:"discipline", icon:"⛓️", title:"الانضباط فوق كل شيء", subtitle:"Discipline Over Motivation", prompt:"اكتب سكريبت عن أن الانضباط أهم من التحفيز. التحفيز بيروح لكن الانضباط بيبني. أسلوب حاد ومباشر. مدة دقيقة.", color:"#1a1a2e" },
-  { id:"transformation", icon:"🦁", title:"قصة تحول", subtitle:"Transformation Story", prompt:"اكتب سكريبت عن رحلة التحول من شخص عادي لوحش. من الضعف للقوة. اجعلها شخصية ومؤثرة. أسلوب سردي قوي. مدة دقيقة ونصف.", color:"#B8860B" },
-  { id:"gym", icon:"🏋️", title:"الجيم مدرستك", subtitle:"The Iron Temple", prompt:"اكتب سكريبت عن الجيم كمدرسة للحياة. كل تمرين درس. كل ألم نمو. اربط التمرين بالنجاح في الحياة. مدة دقيقة.", color:"#2F4F4F" },
-  { id:"custom", icon:"✍️", title:"سكريبت مخصص", subtitle:"Custom Script", prompt:"", color:"#333" }
+  { id:"wake-up", icon:"⚡", title:"Wake Up Call", subtitle:"Early Rise & Discipline", prompt:"اكتب سكريبت فيديو تحفيزي قوي عن الصحيان بدري والانضباط الصباحي. أسلوب ديفيد جوجينز. مدة الفيديو دقيقة واحدة.", color:"#FF4500" },
+  { id:"no-excuses", icon:"🔥", title:"No Excuses", subtitle:"Stop Making Excuses", prompt:"اكتب سكريبت تحفيزي عن التوقف عن الأعذار والبدء في العمل. خاطب الشخص اللي بيأجل حياته. أسلوب قوي وصادم. مدة دقيقة.", color:"#DC143C" },
+  { id:"pain", icon:"💀", title:"Embrace The Pain", subtitle:"Pain Is The Way", prompt:"اكتب سكريبت عن احتضان الألم والتعب كوقود للنجاح. اربط بين ألم التمرين وألم الحياة. أسلوب ديفيد جوجينز الخام. مدة دقيقة.", color:"#8B0000" },
+  { id:"haters", icon:"🐺", title:"Let Them Talk", subtitle:"Silence The Doubters", prompt:"اكتب سكريبت تحفيزي عن تجاهل الكارهين والمنتقدين. كيف تحول كلامهم لوقود. أسلوب واثق وقوي. مدة دقيقة.", color:"#4A0E4E" },
+  { id:"discipline", icon:"⛓️", title:"Discipline Over All", subtitle:"Discipline > Motivation", prompt:"اكتب سكريبت عن أن الانضباط أهم من التحفيز. التحفيز بيروح لكن الانضباط بيبني. أسلوب حاد ومباشر. مدة دقيقة.", color:"#1a1a2e" },
+  { id:"transformation", icon:"🦁", title:"Transformation", subtitle:"From Weak To Beast", prompt:"اكتب سكريبت عن رحلة التحول من شخص عادي لوحش. من الضعف للقوة. اجعلها شخصية ومؤثرة. أسلوب سردي قوي. مدة دقيقة ونصف.", color:"#B8860B" },
+  { id:"gym", icon:"🏋️", title:"The Iron Temple", subtitle:"Gym Is Life's Classroom", prompt:"اكتب سكريبت عن الجيم كمدرسة للحياة. كل تمرين درس. كل ألم نمو. اربط التمرين بالنجاح في الحياة. مدة دقيقة.", color:"#2F4F4F" },
+  { id:"custom", icon:"✍️", title:"Custom Script", subtitle:"Write Your Own Idea", prompt:"", color:"#333" }
 ];
 
 const DURATIONS = [
-  { label:"30 ثانية", value:"30 ثانية" },
-  { label:"دقيقة", value:"دقيقة واحدة" },
-  { label:"دقيقة ونص", value:"دقيقة ونصف" },
-  { label:"دقيقتين", value:"دقيقتين" },
+  { label:"30 Seconds", value:"30 ثانية" },
+  { label:"1 Minute", value:"دقيقة واحدة" },
+  { label:"1.5 Minutes", value:"دقيقة ونصف" },
+  { label:"2 Minutes", value:"دقيقتين" },
 ];
 
 const INTENSITIES = [
@@ -138,7 +131,7 @@ let state = {
   favorites: [],
   error: "",
   toast: null,
-  historyFilter: "all", // "all" or "favorites"
+  historyFilter: "all",
 };
 
 // ─── STORAGE ───
@@ -174,11 +167,11 @@ function countWords(text) {
 
 function estimateReadTime(text) {
   const words = countWords(text);
-  const seconds = Math.ceil(words / 2.5); // ~150 words per minute for Arabic speech
-  if (seconds < 60) return `${seconds} ثانية`;
+  const seconds = Math.ceil(words / 2.5);
+  if (seconds < 60) return `${seconds}s`;
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return secs > 0 ? `${mins}:${String(secs).padStart(2, '0')} دقيقة` : `${mins} دقيقة`;
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }
 
 function isFavorite(id) {
@@ -226,8 +219,17 @@ async function generateScript() {
     });
 
     if (!resp.ok) {
-      const errData = await resp.json();
-      throw new Error(errData.error || `Error ${resp.status}`);
+      let errMsg = `Server error (${resp.status})`;
+      try {
+        const errData = await resp.json();
+        errMsg = errData.error || errMsg;
+      } catch(e) {}
+
+      if (resp.status === 401) errMsg = "Invalid API key. Please update your ANTHROPIC_API_KEY in Render environment settings.";
+      else if (resp.status === 429) errMsg = "Rate limit reached. Please wait a moment and try again.";
+      else if (resp.status === 500) errMsg = "Server error. Please check that ANTHROPIC_API_KEY is set in Render.";
+
+      throw new Error(errMsg);
     }
 
     const reader = resp.body.getReader();
@@ -258,20 +260,22 @@ async function generateScript() {
     }
 
     // Save to history
-    const entry = {
-      id: Date.now(),
-      template: t.title,
-      icon: t.icon,
-      duration: state.duration.label,
-      intensity: state.intensity.desc,
-      script: state.generatedScript,
-      timestamp: new Date().toISOString(),
-    };
-    state.history = [entry, ...state.history].slice(0, 50);
-    saveHistory();
+    if (state.generatedScript.trim()) {
+      const entry = {
+        id: Date.now(),
+        template: t.title,
+        icon: t.icon,
+        duration: state.duration.label,
+        intensity: state.intensity.desc,
+        script: state.generatedScript,
+        timestamp: new Date().toISOString(),
+      };
+      state.history = [entry, ...state.history].slice(0, 50);
+      saveHistory();
+    }
 
   } catch(e) {
-    state.error = e.message || "حصل مشكلة في التوليد. حاول تاني.";
+    state.error = e.message || "Something went wrong. Please try again.";
     console.error(e);
   }
 
@@ -286,12 +290,11 @@ function updateStreamingView() {
     el.innerHTML = state.generatedScript.replace(/\n/g, "<br>");
     el.scrollTop = el.scrollHeight;
   }
-  // Update stats
   const statsEl = document.getElementById("script-stats");
   if (statsEl) {
     const words = countWords(state.generatedScript);
     const readTime = estimateReadTime(state.generatedScript);
-    statsEl.innerHTML = `${words} كلمة &bull; ${readTime} قراءة`;
+    statsEl.innerHTML = `${words} words &bull; ${readTime} read time`;
   }
 }
 
@@ -307,12 +310,12 @@ function copyScript() {
   const editArea = document.getElementById("script-edit");
   const text = editArea ? editArea.value : state.generatedScript;
   navigator.clipboard.writeText(text).then(() => {
-    showToast("تم النسخ ✅");
+    showToast("Copied!");
     haptic();
   });
 }
 
-// ─── TEMPLATES ───
+// ─── VIEWS ───
 function renderApp() {
   let content = "";
   if (state.view === "home") content = renderHome();
@@ -331,8 +334,8 @@ function renderApp() {
 }
 
 function renderHeader() {
-  const historyBtn = `<button onclick="nav('${state.view==="history"?"home":"history"}')" style="background:${state.view==="history"?"#FF4500":"#1e1e1e"};border:1px solid ${state.view==="history"?"#FF4500":"#2a2a2a"};color:${state.view==="history"?"#fff":"#f0f0f0"};border-radius:10px;padding:8px 14px;font-size:13px;">📜 السجل</button>`;
-  const backBtn = state.view !== "home" ? `<button onclick="nav('home')" style="background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;border-radius:10px;padding:8px 14px;font-size:13px;">الرئيسية</button>` : "";
+  const historyBtn = `<button onclick="nav('${state.view==="history"?"home":"history"}')" style="background:${state.view==="history"?"#FF4500":"#1e1e1e"};border:1px solid ${state.view==="history"?"#FF4500":"#2a2a2a"};color:${state.view==="history"?"#fff":"#f0f0f0"};border-radius:10px;padding:8px 14px;font-size:13px;">History</button>`;
+  const backBtn = state.view !== "home" ? `<button onclick="nav('home')" style="background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;border-radius:10px;padding:8px 14px;font-size:13px;">Home</button>` : "";
 
   return `
     <div class="header" style="padding-left:24px;padding-right:24px;padding-bottom:12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a2a2a;">
@@ -347,8 +350,8 @@ function renderHeader() {
 
 function renderHome() {
   const cards = TEMPLATES.map((t, i) => `
-    <button class="card-hover" onclick="selectTemplate(${i})" style="background:linear-gradient(145deg,#141414 0%,${t.color}22 100%);border:1px solid ${t.color}44;border-radius:16px;padding:20px 16px;text-align:right;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;animation:slideUp ${0.2 + i*0.05}s ease-out;">
-      <div style="position:absolute;top:-20px;left:-20px;width:80px;height:80px;background:radial-gradient(circle,${t.color}15 0%,transparent 70%);border-radius:50%;"></div>
+    <button class="card-hover" onclick="selectTemplate(${i})" style="background:linear-gradient(145deg,#141414 0%,${t.color}22 100%);border:1px solid ${t.color}44;border-radius:16px;padding:20px 16px;text-align:left;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;animation:slideUp ${0.2 + i*0.05}s ease-out;">
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,${t.color}15 0%,transparent 70%);border-radius:50%;"></div>
       <span style="font-size:28px;">${t.icon}</span>
       <span style="font-size:16px;font-weight:800;color:#f0f0f0;line-height:1.3;">${t.title}</span>
       <span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">${t.subtitle}</span>
@@ -359,7 +362,7 @@ function renderHome() {
     <div class="content" style="padding:20px 20px;">
       <div style="text-align:center;padding:32px 0 28px;">
         <div style="font-size:48px;margin-bottom:12px;filter:drop-shadow(0 0 20px rgba(255,69,0,0.4));">🔥</div>
-        <h1 style="font-size:26px;font-weight:900;margin:0 0 8px;line-height:1.3;">اكتب سكريبت يولّع</h1>
+        <h1 style="font-size:26px;font-weight:900;margin:0 0 8px;line-height:1.3;">Write Scripts That Burn</h1>
         <p style="font-size:14px;color:#888;margin:0;line-height:1.6;">${BRAND.tagline}</p>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${cards}</div>
@@ -373,8 +376,8 @@ function renderGenerate() {
 
   const customArea = t.id === "custom" ? `
     <div style="margin-bottom:24px;">
-      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;color:#888;">وصف السكريبت</label>
-      <textarea id="customInput" oninput="state.customPrompt=this.value" placeholder="اكتب فكرة السكريبت هنا... مثلاً: سكريبت عن قوة الإرادة بعد الفشل" style="width:100%;min-height:100px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:14px;color:#f0f0f0;font-size:15px;font-family:inherit;direction:rtl;resize:vertical;outline:none;line-height:1.7;">${state.customPrompt}</textarea>
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;color:#888;">Describe Your Script</label>
+      <textarea id="customInput" oninput="state.customPrompt=this.value" placeholder="Describe your script idea here... e.g., a script about willpower after failure" style="width:100%;min-height:100px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:14px;color:#f0f0f0;font-size:15px;font-family:inherit;resize:vertical;outline:none;line-height:1.7;">${state.customPrompt}</textarea>
     </div>
   ` : "";
 
@@ -392,8 +395,8 @@ function renderGenerate() {
 
   const disabled = state.loading || (t.id === "custom" && !state.customPrompt.trim());
   const btnContent = state.loading
-    ? `<span style="display:flex;align-items:center;justify-content:center;gap:10px;"><span style="display:inline-block;width:18px;height:18px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></span>الوحش بيكتب...</span>`
-    : `🔥 وَلّع السكريبت`;
+    ? `<span style="display:flex;align-items:center;justify-content:center;gap:10px;"><span style="display:inline-block;width:18px;height:18px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></span>The Beast Is Writing...</span>`
+    : `🔥 Generate Script`;
 
   return `
     <div class="content" style="padding:20px 20px;">
@@ -408,12 +411,12 @@ function renderGenerate() {
       ${customArea}
 
       <div style="margin-bottom:24px;">
-        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">⏱ مدة الفيديو</label>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">Video Duration</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">${durationBtns}</div>
       </div>
 
       <div style="margin-bottom:32px;">
-        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">💪 مستوى الشدة</label>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">Intensity Level</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">${intensityBtns}</div>
       </div>
 
@@ -441,47 +444,52 @@ function renderResult() {
   return `
     <div class="content" style="padding:20px 20px;">
       <div style="text-align:center;padding:20px 0 16px;">
-        <div style="font-size:40px;margin-bottom:8px;">${isStreaming ? '✍️' : '✅'}</div>
-        <h2 style="font-size:22px;font-weight:900;margin:0 0 4px;">${isStreaming ? 'الوحش بيكتب...' : 'السكريبت جاهز'}</h2>
+        <div style="font-size:40px;margin-bottom:8px;">${isStreaming ? '✍️' : (state.error ? '⚠️' : '✅')}</div>
+        <h2 style="font-size:22px;font-weight:900;margin:0 0 4px;">${isStreaming ? 'The Beast Is Writing...' : (state.error ? 'Generation Failed' : 'Script Ready')}</h2>
         <p style="font-size:13px;color:#888;margin:0;">${t?t.title:''} &bull; ${state.duration.label} &bull; ${state.intensity.desc}</p>
       </div>
 
       ${errorBox}
 
-      <!-- Stats bar -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 4px;">
-        <div id="script-stats" style="font-size:12px;color:#666;">
-          ${words > 0 ? `${words} كلمة &bull; ${readTime} قراءة` : ''}
+      ${state.generatedScript || isStreaming ? `
+        <!-- Stats bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 4px;">
+          <div id="script-stats" style="font-size:12px;color:#666;">
+            ${words > 0 ? `${words} words &bull; ${readTime} read time` : ''}
+          </div>
+          ${!isStreaming && currentId ? `
+            <button class="star-btn" onclick="toggleFavorite(${currentId})" style="background:none;border:none;font-size:22px;padding:4px 8px;color:${isFav ? '#FFD700' : '#555'};">
+              ${isFav ? '★' : '☆'}
+            </button>
+          ` : ''}
         </div>
-        ${!isStreaming && currentId ? `
-          <button class="star-btn" onclick="toggleFavorite(${currentId})" style="background:none;border:none;font-size:22px;padding:4px 8px;color:${isFav ? '#FFD700' : '#555'};">
-            ${isFav ? '★' : '☆'}
-          </button>
-        ` : ''}
-      </div>
 
-      <!-- Script display: streaming mode vs edit mode -->
-      ${isStreaming ? `
-        <div id="script-output" class="streaming-cursor" style="background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:20px;margin-bottom:16px;line-height:2;font-size:16px;direction:rtl;min-height:120px;max-height:60vh;overflow-y:auto;">
-          ${scriptHtml}
-        </div>
-      ` : `
-        <textarea id="script-edit" class="script-editable" rows="12">${state.generatedScript}</textarea>
-        <div style="font-size:11px;color:#444;margin:-10px 0 16px 0;padding:0 4px;">اضغط على النص للتعديل</div>
-      `}
+        <!-- Script display -->
+        ${isStreaming ? `
+          <div id="script-output" class="streaming-cursor" style="background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:20px;margin-bottom:16px;line-height:2;font-size:16px;direction:rtl;min-height:120px;max-height:60vh;overflow-y:auto;">
+            ${scriptHtml}
+          </div>
+        ` : `
+          <textarea id="script-edit" class="script-editable" rows="12">${state.generatedScript}</textarea>
+          <div style="font-size:11px;color:#444;margin:-10px 0 16px 0;padding:0 4px;">Tap the text above to edit before copying</div>
+        `}
+      ` : ''}
 
       ${!isStreaming ? `
-        <!-- Action buttons -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-          <button onclick="copyScript()" style="padding:12px 8px;border-radius:12px;border:1px solid #FF4500;background:transparent;color:#FF4500;font-size:13px;font-weight:700;">📋 نسخ</button>
-          <button onclick="shareWhatsApp()" style="padding:12px 8px;border-radius:12px;border:1px solid #25D366;background:transparent;color:#25D366;font-size:13px;font-weight:700;">💬 واتساب</button>
-          <button onclick="regenerate()" style="padding:12px 8px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF4500,#DC143C);color:#fff;font-size:13px;font-weight:700;">🔄 جديد</button>
+          ${state.generatedScript ? `
+            <button onclick="copyScript()" style="padding:12px 8px;border-radius:12px;border:1px solid #FF4500;background:transparent;color:#FF4500;font-size:13px;font-weight:700;">Copy</button>
+            <button onclick="shareWhatsApp()" style="padding:12px 8px;border-radius:12px;border:1px solid #25D366;background:transparent;color:#25D366;font-size:13px;font-weight:700;">WhatsApp</button>
+          ` : `
+            <div></div><div></div>
+          `}
+          <button onclick="regenerate()" style="padding:12px 8px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF4500,#DC143C);color:#fff;font-size:13px;font-weight:700;">${state.error ? 'Try Again' : 'New Script'}</button>
         </div>
-        <button onclick="nav('home')" style="width:100%;padding:14px;border-radius:12px;border:1px solid #2a2a2a;background:transparent;color:#888;font-size:14px;font-weight:600;">← الرئيسية</button>
+        <button onclick="nav('home')" style="width:100%;padding:14px;border-radius:12px;border:1px solid #2a2a2a;background:transparent;color:#888;font-size:14px;font-weight:600;">Back to Home</button>
       ` : `
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;color:#888;font-size:14px;">
           <span style="display:inline-block;width:14px;height:14px;border:2px solid #FF450044;border-top-color:#FF4500;border-radius:50%;animation:spin 0.8s linear infinite;"></span>
-          جاري التوليد...
+          Generating...
         </div>
       `}
     </div>
@@ -494,18 +502,18 @@ function renderHistory() {
 
   const filterBtns = `
     <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <button onclick="state.historyFilter='all';render()" style="padding:8px 16px;border-radius:8px;border:1px solid ${!showFavs?'#FF4500':'#2a2a2a'};background:${!showFavs?'#FF450020':'transparent'};color:${!showFavs?'#FF4500':'#888'};font-size:13px;font-weight:700;">الكل (${state.history.length})</button>
-      <button onclick="state.historyFilter='favorites';render()" style="padding:8px 16px;border-radius:8px;border:1px solid ${showFavs?'#FFD700':'#2a2a2a'};background:${showFavs?'#FFD70020':'transparent'};color:${showFavs?'#FFD700':'#888'};font-size:13px;font-weight:700;">★ المفضلة (${state.history.filter(h => isFavorite(h.id)).length})</button>
-      ${state.history.length > 0 ? `<button onclick="clearAllHistory()" style="margin-right:auto;padding:8px 16px;border-radius:8px;border:1px solid #DC143C44;background:transparent;color:#DC143C;font-size:13px;font-weight:700;">مسح الكل</button>` : ''}
+      <button onclick="state.historyFilter='all';render()" style="padding:8px 16px;border-radius:8px;border:1px solid ${!showFavs?'#FF4500':'#2a2a2a'};background:${!showFavs?'#FF450020':'transparent'};color:${!showFavs?'#FF4500':'#888'};font-size:13px;font-weight:700;">All (${state.history.length})</button>
+      <button onclick="state.historyFilter='favorites';render()" style="padding:8px 16px;border-radius:8px;border:1px solid ${showFavs?'#FFD700':'#2a2a2a'};background:${showFavs?'#FFD70020':'transparent'};color:${showFavs?'#FFD700':'#888'};font-size:13px;font-weight:700;">Favorites (${state.history.filter(h => isFavorite(h.id)).length})</button>
+      ${state.history.length > 0 ? `<button onclick="clearAllHistory()" style="margin-left:auto;padding:8px 16px;border-radius:8px;border:1px solid #DC143C44;background:transparent;color:#DC143C;font-size:13px;font-weight:700;">Clear All</button>` : ''}
     </div>
   `;
 
   if (filteredHistory.length === 0) {
-    const emptyMsg = showFavs ? "مفيش مفضلات لسه" : "مفيش سكريبتات لسه";
-    const emptyDesc = showFavs ? "اضغط ★ على أي سكريبت لإضافته للمفضلة" : "ابدأ بتوليد أول سكريبت!";
+    const emptyMsg = showFavs ? "No favorites yet" : "No scripts yet";
+    const emptyDesc = showFavs ? "Tap the star on any script to add it to favorites" : "Start by generating your first script!";
     return `
       <div class="content" style="padding:20px 20px;">
-        <h2 style="font-size:22px;font-weight:900;padding:20px 0 16px;">📜 سجل السكريبتات</h2>
+        <h2 style="font-size:22px;font-weight:900;padding:20px 0 16px;">Script History</h2>
         ${filterBtns}
         <div style="text-align:center;padding:60px 20px;color:#888;">
           <div style="font-size:48px;margin-bottom:16px;opacity:0.4;">${showFavs ? '★' : '📝'}</div>
@@ -517,7 +525,7 @@ function renderHistory() {
   }
 
   const items = filteredHistory.map((item, i) => {
-    const date = new Date(item.timestamp).toLocaleDateString("ar-EG", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+    const date = new Date(item.timestamp).toLocaleDateString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
     const preview = item.script.substring(0, 120) + (item.script.length > 120 ? "..." : "");
     const words = countWords(item.script);
     const readTime = estimateReadTime(item.script);
@@ -529,7 +537,7 @@ function renderHistory() {
             <span style="font-size:22px;">${item.icon}</span>
             <div>
               <div style="font-size:15px;font-weight:700;">${item.template}</div>
-              <div style="font-size:11px;color:#888;">${item.duration} &bull; ${item.intensity} &bull; ${words} كلمة &bull; ${readTime}</div>
+              <div style="font-size:11px;color:#888;">${item.duration} &bull; ${item.intensity} &bull; ${words} words &bull; ${readTime}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
@@ -540,14 +548,14 @@ function renderHistory() {
           </div>
         </div>
         <div style="font-size:13px;color:#888;line-height:1.8;direction:rtl;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${preview}</div>
-        <div style="font-size:11px;color:#444;margin-top:10px;text-align:left;direction:ltr;">${date}</div>
+        <div style="font-size:11px;color:#444;margin-top:10px;text-align:right;">${date}</div>
       </div>
     `;
   }).join("");
 
   return `
     <div class="content" style="padding:20px 20px;">
-      <h2 style="font-size:22px;font-weight:900;padding:20px 0 16px;">📜 سجل السكريبتات</h2>
+      <h2 style="font-size:22px;font-weight:900;padding:20px 0 16px;">Script History</h2>
       ${filterBtns}
       <div style="display:flex;flex-direction:column;gap:12px;">${items}</div>
     </div>
@@ -559,7 +567,7 @@ function nav(view) { state.view = view; render(); window.scrollTo(0,0); haptic()
 function selectTemplate(i) { state.selectedTemplate = TEMPLATES[i]; state.view = "generate"; state.error = ""; render(); window.scrollTo(0,0); haptic(); }
 function setDuration(i) { state.duration = DURATIONS[i]; render(); haptic(); }
 function setIntensity(i) { state.intensity = INTENSITIES[i]; render(); haptic(); }
-function regenerate() { state.generatedScript = ""; state.view = "generate"; render(); }
+function regenerate() { state.generatedScript = ""; state.error = ""; state.view = "generate"; render(); }
 
 function viewHistoryItem(i, fromFavorites) {
   const list = fromFavorites ? state.history.filter(h => isFavorite(h.id)) : state.history;
@@ -585,7 +593,7 @@ function clearAllHistory() {
   state.history = [];
   state.favorites = [];
   saveHistory();
-  showToast("تم مسح السجل");
+  showToast("History cleared");
   haptic();
 }
 
@@ -593,13 +601,10 @@ function bindEvents() {
   const ta = document.getElementById("customInput");
   if (ta) ta.value = state.customPrompt;
 
-  // Sync editable script back to state
   const editArea = document.getElementById("script-edit");
   if (editArea) {
     editArea.addEventListener("input", () => {
       state.generatedScript = editArea.value;
-      // Update the history entry too
-      const entry = state.history.find(h => h.script !== editArea.value);
       if (state.history.length > 0) {
         state.history[0].script = editArea.value;
         saveHistory();
