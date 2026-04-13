@@ -68,13 +68,14 @@ app.post("/api/generate", rateLimit, async (req, res) => {
 
     if (!response.ok) {
       let errMsg = `Gemini API error (${response.status})`;
+      let rawError = "";
       try {
         const errData = await response.json();
+        rawError = JSON.stringify(errData);
         errMsg = errData?.error?.message || errMsg;
       } catch(e) {}
 
-      if (response.status === 400) errMsg = "Invalid API key. Please update GEMINI_API_KEY in Render environment.";
-      else if (response.status === 429) errMsg = "Gemini rate limit reached. Please wait and try again.";
+      console.error(`Gemini error ${response.status}:`, rawError || errMsg);
 
       return res.status(response.status).json({ error: errMsg });
     }
