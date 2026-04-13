@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Beast Scripts" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="description" content="Beast Coaching AI Script Writer" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+  <title>Beast Scripts</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: #0a0a0a;
+      color: #f0f0f0;
+      direction: rtl;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      overscroll-behavior: none;
+    }
+    html { height: -webkit-fill-available; }
+    textarea::placeholder { color: #555; }
+    button { font-family: 'Tajawal', sans-serif; cursor: pointer; -webkit-appearance: none; }
+    button:active { transform: scale(0.97) !important; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    .view-enter { animation: fadeIn 0.35s ease-out; }
+    .card-hover:active { transform: scale(0.97); }
+
+    /* Safe areas for iPhone notch */
+    .header { padding-top: max(20px, env(safe-area-inset-top)); }
+    .bottom-bar { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    .content { padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom))); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      background: #222; color: #fff; padding: 10px 24px; border-radius: 20px;
+      font-size: 14px; z-index: 999; animation: fadeIn 0.3s ease;
+      border: 1px solid #333;
+    }
+    .toast.hide { opacity: 0; transition: opacity 0.3s; }
+  </style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ─── CONFIG ───
+const BRAND = {
+  name: "Beast Coaching",
+  coach: "Coach Abdelrahman",
+  handle: "@beastcoachingegypt",
+  tagline: "لا مكان للضعف هنا",
+  systemPrompt: `You are an Arabic motivational script writer for "Beast Coaching by Coach Abdelrahman" (@beastcoachingegypt). 
+
+Your writing style:
+- David Goggins energy: raw, intense, no-excuses, confrontational self-talk
+- Speak directly to the viewer like a tough coach who genuinely cares
+- Use Egyptian Arabic dialect mixed with Modern Standard Arabic for impact
+- Short punchy sentences. Repetition for emphasis. Rhetorical questions that hit hard.
+- Build emotional tension — start with pain/struggle, escalate, then deliver the breakthrough moment
+- Reference real struggle: waking up early, pushing through pain, ignoring haters, choosing discipline over comfort
+- End with a powerful call to action or a line that sticks in the viewer's head
+- Use fitness/training metaphors naturally (the gym is life's classroom)
+- Brand sign-off when appropriate: "Beast Coaching - لا مكان للضعف هنا"
+
+IMPORTANT: Write ONLY in Arabic. The entire script must be in Arabic (Egyptian dialect preferred with MSA for powerful moments).
+Respond ONLY with the script content. No English. No explanations. No markdown formatting.
+Format the script with clear line breaks between sections for video pacing.`
+};
+
+const TEMPLATES = [
+  { id:"wake-up", icon:"⚡", title:"صحيان الفجر", subtitle:"Wake Up Call", prompt:"اكتب سكريبت فيديو تحفيزي قوي عن الصحيان بدري والانضباط الصباحي. أسلوب ديفيد جوجينز. مدة الفيديو دقيقة واحدة.", color:"#FF4500" },
+  { id:"no-excuses", icon:"🔥", title:"مفيش أعذار", subtitle:"No Excuses", prompt:"اكتب سكريبت تحفيزي عن التوقف عن الأعذار والبدء في العمل. خاطب الشخص اللي بيأجل حياته. أسلوب قوي وصادم. مدة دقيقة.", color:"#DC143C" },
+  { id:"pain", icon:"💀", title:"الألم هو الطريق", subtitle:"Embrace The Pain", prompt:"اكتب سكريبت عن احتضان الألم والتعب كوقود للنجاح. اربط بين ألم التمرين وألم الحياة. أسلوب ديفيد جوجينز الخام. مدة دقيقة.", color:"#8B0000" },
+  { id:"haters", icon:"🐺", title:"خلي الكلاب تنبح", subtitle:"Let Them Talk", prompt:"اكتب سكريبت تحفيزي عن تجاهل الكارهين والمنتقدين. كيف تحول كلامهم لوقود. أسلوب واثق وقوي. مدة دقيقة.", color:"#4A0E4E" },
+  { id:"discipline", icon:"⛓️", title:"الانضباط فوق كل شيء", subtitle:"Discipline Over Motivation", prompt:"اكتب سكريبت عن أن الانضباط أهم من التحفيز. التحفيز بيروح لكن الانضباط بيبني. أسلوب حاد ومباشر. مدة دقيقة.", color:"#1a1a2e" },
+  { id:"transformation", icon:"🦁", title:"قصة تحول", subtitle:"Transformation Story", prompt:"اكتب سكريبت عن رحلة التحول من شخص عادي لوحش. من الضعف للقوة. اجعلها شخصية ومؤثرة. أسلوب سردي قوي. مدة دقيقة ونصف.", color:"#B8860B" },
+  { id:"gym", icon:"🏋️", title:"الجيم مدرستك", subtitle:"The Iron Temple", prompt:"اكتب سكريبت عن الجيم كمدرسة للحياة. كل تمرين درس. كل ألم نمو. اربط التمرين بالنجاح في الحياة. مدة دقيقة.", color:"#2F4F4F" },
+  { id:"custom", icon:"✍️", title:"سكريبت مخصص", subtitle:"Custom Script", prompt:"", color:"#333" }
+];
+
+const DURATIONS = [
+  { label:"30 ثانية", value:"30 ثانية" },
+  { label:"دقيقة", value:"دقيقة واحدة" },
+  { label:"دقيقة ونص", value:"دقيقة ونصف" },
+  { label:"دقيقتين", value:"دقيقتين" },
+];
+
+const INTENSITIES = [
+  { label:"🔥", value:"تحفيزي قوي", desc:"Strong" },
+  { label:"💀", value:"صادم وخام مثل ديفيد جوجينز", desc:"Raw Goggins" },
+  { label:"🫀", value:"عاطفي ومؤثر مع رسالة قوية", desc:"Emotional" },
+];
+
+// ─── STATE ───
+let state = {
+  view: "home",
+  selectedTemplate: null,
+  customPrompt: "",
+  duration: DURATIONS[1],
+  intensity: INTENSITIES[1],
+  loading: false,
+  generatedScript: "",
+  history: [],
+  error: "",
+  toast: null,
+};
+
+// ─── STORAGE ───
+function loadHistory() {
+  try {
+    const data = localStorage.getItem("beast-history");
+    if (data) state.history = JSON.parse(data);
+  } catch(e) {}
+}
+function saveHistory() {
+  try {
+    localStorage.setItem("beast-history", JSON.stringify(state.history));
+  } catch(e) {}
+}
+
+// ─── RENDER ENGINE ───
+function $(sel) { return document.querySelector(sel); }
+function render() { $("#app").innerHTML = renderApp(); bindEvents(); }
+
+function showToast(msg) {
+  state.toast = msg;
+  render();
+  setTimeout(() => { state.toast = null; render(); }, 2000);
+}
+
+// ─── API ───
+async function generateScript() {
+  state.loading = true;
+  state.error = "";
+  render();
+
+  const t = state.selectedTemplate;
+  const prompt = t.id === "custom" ? state.customPrompt : t.prompt;
+  const fullPrompt = `${prompt}\n\nمدة الفيديو المطلوبة: ${state.duration.value}\nالأسلوب: ${state.intensity.value}\n\nاكتب السكريبت الآن بالعربي فقط.`;
+
+  try {
+    const resp = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: BRAND.systemPrompt,
+        messages: [{ role: "user", content: fullPrompt }],
+      }),
+    });
+    const data = await resp.json();
+    const script = data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
+
+    state.generatedScript = script;
+    const entry = {
+      id: Date.now(),
+      template: t.title,
+      icon: t.icon,
+      duration: state.duration.label,
+      intensity: state.intensity.desc,
+      script,
+      timestamp: new Date().toISOString(),
+    };
+    state.history = [entry, ...state.history].slice(0, 50);
+    saveHistory();
+    state.view = "result";
+  } catch(e) {
+    state.error = "حصل مشكلة في التوليد. حاول تاني.";
+    console.error(e);
+  }
+  state.loading = false;
+  render();
+}
+
+// ─── TEMPLATES ───
+function renderApp() {
+  let content = "";
+  if (state.view === "home") content = renderHome();
+  else if (state.view === "generate") content = renderGenerate();
+  else if (state.view === "result") content = renderResult();
+  else if (state.view === "history") content = renderHistory();
+
+  return `
+    ${renderHeader()}
+    <div class="view-enter">${content}</div>
+    ${state.toast ? `<div class="toast">${state.toast}</div>` : ""}
+    <div class="bottom-bar" style="position:fixed;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,#0a0a0a);padding:40px 0 12px;text-align:center;pointer-events:none;z-index:10;">
+      <div style="font-size:10px;color:#333;letter-spacing:2px;text-transform:uppercase;">Beast Coaching © ${BRAND.handle}</div>
+    </div>
+  `;
+}
+
+function renderHeader() {
+  const historyBtn = `<button onclick="nav('${state.view==="history"?"home":"history"}')" style="background:${state.view==="history"?"#FF4500":"#1e1e1e"};border:1px solid ${state.view==="history"?"#FF4500":"#2a2a2a"};color:${state.view==="history"?"#fff":"#f0f0f0"};border-radius:10px;padding:8px 14px;font-size:13px;">📜 السجل</button>`;
+  const backBtn = state.view !== "home" ? `<button onclick="nav('home')" style="background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;border-radius:10px;padding:8px 14px;font-size:13px;">الرئيسية</button>` : "";
+
+  return `
+    <div class="header" style="padding-left:24px;padding-right:24px;padding-bottom:12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a2a2a;">
+      <div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,#FF4500,#DC143C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;">BEAST SCRIPTS</div>
+        <div style="font-size:11px;color:#888;letter-spacing:1px;text-transform:uppercase;">Coach Abdelrahman</div>
+      </div>
+      <div style="display:flex;gap:8px;">${backBtn}${historyBtn}</div>
+    </div>
+  `;
+}
+
+function renderHome() {
+  const cards = TEMPLATES.map((t, i) => `
+    <button class="card-hover" onclick="selectTemplate(${i})" style="background:linear-gradient(145deg,#141414 0%,${t.color}22 100%);border:1px solid ${t.color}44;border-radius:16px;padding:20px 16px;text-align:right;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;animation:slideUp ${0.2 + i*0.05}s ease-out;">
+      <div style="position:absolute;top:-20px;left:-20px;width:80px;height:80px;background:radial-gradient(circle,${t.color}15 0%,transparent 70%);border-radius:50%;"></div>
+      <span style="font-size:28px;">${t.icon}</span>
+      <span style="font-size:16px;font-weight:800;color:#f0f0f0;line-height:1.3;">${t.title}</span>
+      <span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">${t.subtitle}</span>
+    </button>
+  `).join("");
+
+  return `
+    <div class="content" style="padding:20px 20px;">
+      <div style="text-align:center;padding:32px 0 28px;">
+        <div style="font-size:48px;margin-bottom:12px;filter:drop-shadow(0 0 20px rgba(255,69,0,0.4));">🔥</div>
+        <h1 style="font-size:26px;font-weight:900;margin:0 0 8px;line-height:1.3;">اكتب سكريبت يولّع</h1>
+        <p style="font-size:14px;color:#888;margin:0;line-height:1.6;">${BRAND.tagline}</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${cards}</div>
+    </div>
+  `;
+}
+
+function renderGenerate() {
+  const t = state.selectedTemplate;
+  if (!t) return "";
+
+  const customArea = t.id === "custom" ? `
+    <div style="margin-bottom:24px;">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;color:#888;">وصف السكريبت</label>
+      <textarea id="customInput" oninput="state.customPrompt=this.value" placeholder="اكتب فكرة السكريبت هنا... مثلاً: سكريبت عن قوة الإرادة بعد الفشل" style="width:100%;min-height:100px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:14px;color:#f0f0f0;font-size:15px;font-family:inherit;direction:rtl;resize:vertical;outline:none;line-height:1.7;">${state.customPrompt}</textarea>
+    </div>
+  ` : "";
+
+  const durationBtns = DURATIONS.map((d, i) => {
+    const sel = state.duration.label === d.label;
+    return `<button onclick="setDuration(${i})" style="padding:10px 18px;border-radius:10px;border:${sel?'2px solid #FF4500':'1px solid #2a2a2a'};background:${sel?'#FF450020':'#1e1e1e'};color:${sel?'#FF4500':'#f0f0f0'};font-size:14px;font-weight:700;">${d.label}</button>`;
+  }).join("");
+
+  const intensityBtns = INTENSITIES.map((x, i) => {
+    const sel = state.intensity.desc === x.desc;
+    return `<button onclick="setIntensity(${i})" style="padding:10px 16px;border-radius:10px;border:${sel?'2px solid #FF4500':'1px solid #2a2a2a'};background:${sel?'#FF450020':'#1e1e1e'};color:${sel?'#FF4500':'#f0f0f0'};font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;"><span style="font-size:18px;">${x.label}</span><span>${x.desc}</span></button>`;
+  }).join("");
+
+  const errorBox = state.error ? `<div style="background:#DC143C22;border:1px solid #DC143C44;border-radius:10px;padding:14px;margin-bottom:16px;font-size:14px;color:#ff6b6b;text-align:center;">${state.error}</div>` : "";
+
+  const disabled = state.loading || (t.id === "custom" && !state.customPrompt.trim());
+  const btnContent = state.loading
+    ? `<span style="display:flex;align-items:center;justify-content:center;gap:10px;"><span style="display:inline-block;width:18px;height:18px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></span>الوحش بيكتب...</span>`
+    : `🔥 وَلّع السكريبت`;
+
+  return `
+    <div class="content" style="padding:20px 20px;">
+      <div style="display:flex;align-items:center;gap:14px;padding:24px 0 20px;border-bottom:1px solid #2a2a2a;margin-bottom:24px;">
+        <div style="font-size:36px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;background:${t.color}22;border-radius:14px;border:1px solid ${t.color}44;">${t.icon}</div>
+        <div>
+          <div style="font-size:20px;font-weight:800;">${t.title}</div>
+          <div style="font-size:12px;color:#888;">${t.subtitle}</div>
+        </div>
+      </div>
+
+      ${customArea}
+
+      <div style="margin-bottom:24px;">
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">⏱ مدة الفيديو</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${durationBtns}</div>
+      </div>
+
+      <div style="margin-bottom:32px;">
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">💪 مستوى الشدة</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${intensityBtns}</div>
+      </div>
+
+      ${errorBox}
+
+      <button onclick="generateScript()" ${disabled?'disabled':''} style="width:100%;padding:16px;border-radius:14px;border:none;background:${state.loading?'#1e1e1e':'linear-gradient(135deg,#FF4500,#DC143C)'};color:#fff;font-size:18px;font-weight:900;letter-spacing:0.5px;opacity:${disabled?'0.4':'1'};">
+        ${btnContent}
+      </button>
+    </div>
+  `;
+}
+
+function renderResult() {
+  const t = state.selectedTemplate;
+  const scriptHtml = state.generatedScript.replace(/\n/g, "<br>");
+
+  return `
+    <div class="content" style="padding:20px 20px;">
+      <div style="text-align:center;padding:20px 0 24px;">
+        <div style="font-size:40px;margin-bottom:8px;">✅</div>
+        <h2 style="font-size:22px;font-weight:900;margin:0 0 4px;">السكريبت جاهز</h2>
+        <p style="font-size:13px;color:#888;margin:0;">${t?t.title:''} • ${state.duration.label} • ${state.intensity.desc}</p>
+      </div>
+
+      <div style="background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:20px;margin-bottom:16px;line-height:2;font-size:16px;direction:rtl;">
+        ${scriptHtml}
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="copyScript()" style="flex:1;padding:14px;border-radius:12px;border:1px solid #FF4500;background:transparent;color:#FF4500;font-size:15px;font-weight:700;">📋 نسخ</button>
+        <button onclick="regenerate()" style="flex:1;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#FF4500,#DC143C);color:#fff;font-size:15px;font-weight:700;">🔄 توليد تاني</button>
+      </div>
+      <button onclick="nav('home')" style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:1px solid #2a2a2a;background:transparent;color:#888;font-size:14px;font-weight:600;">← الرئيسية</button>
+    </div>
+  `;
+}
+
+function renderHistory() {
+  if (state.history.length === 0) {
+    return `
+      <div class="content" style="padding:20px 20px;">
+        <h2 style="font-size:22px;font-weight:900;padding:20px 0 16px;">📜 سجل السكريبتات</h2>
+        <div style="text-align:center;padding:60px 20px;color:#888;">
+          <div style="font-size:48px;margin-bottom:16px;opacity:0.4;">📝</div>
+          <p style="font-size:15px;">مفيش سكريبتات لسه</p>
+          <p style="font-size:13px;">ابدأ بتوليد أول سكريبت!</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const items = state.history.map((item, i) => {
+    const date = new Date(item.timestamp).toLocaleDateString("ar-EG", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+    const preview = item.script.substring(0, 120) + (item.script.length > 120 ? "..." : "");
+    return `
+      <div onclick="viewHistoryItem(${i})" style="background:#141414;border:1px solid #2a2a2a;border-radius:14px;padding:16px;cursor:pointer;animation:slideUp ${0.15+i*0.05}s ease-out;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">${item.icon}</span>
+            <div>
+              <div style="font-size:15px;font-weight:700;">${item.template}</div>
+              <div style="font-size:11px;color:#888;">${item.duration} • ${item.intensity}</div>
+            </div>
+          </div>
+          <button onclick="event.stopPropagation();deleteHistory(${item.id})" style="background:none;border:none;color:#555;font-size:18px;padding:4px;">✕</button>
+        </div>
+        <div style="font-size:13px;color:#888;line-height:1.8;direction:rtl;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;">${preview}</div>
+        <div style="font-size:11px;color:#444;margin-top:10px;text-align:left;direction:ltr;">${date}</div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="content" style="padding:20px 20px;">
+      <h2 style="font-size:22px;font-weight:900;padding:20px 0 16px;">📜 سجل السكريبتات</h2>
+      <div style="display:flex;flex-direction:column;gap:12px;">${items}</div>
+    </div>
+  `;
+}
+
+// ─── ACTIONS ───
+function nav(view) { state.view = view; render(); window.scrollTo(0,0); }
+function selectTemplate(i) { state.selectedTemplate = TEMPLATES[i]; state.view = "generate"; render(); window.scrollTo(0,0); }
+function setDuration(i) { state.duration = DURATIONS[i]; render(); }
+function setIntensity(i) { state.intensity = INTENSITIES[i]; render(); }
+function regenerate() { state.generatedScript = ""; state.view = "generate"; render(); }
+
+function copyScript() {
+  navigator.clipboard.writeText(state.generatedScript).then(() => showToast("تم النسخ ✅"));
+}
+
+function viewHistoryItem(i) {
+  const item = state.history[i];
+  state.generatedScript = item.script;
+  state.selectedTemplate = TEMPLATES.find(t => t.title === item.template) || TEMPLATES[0];
+  state.view = "result";
+  render();
+  window.scrollTo(0,0);
+}
+
+function deleteHistory(id) {
+  state.history = state.history.filter(h => h.id !== id);
+  saveHistory();
+  render();
+}
+
+function bindEvents() {
+  // Textarea persistence
+  const ta = document.getElementById("customInput");
+  if (ta) ta.value = state.customPrompt;
+}
+
+// ─── SERVICE WORKER ───
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(() => {
+    console.log('SW registered');
+  }).catch(e => console.log('SW failed', e));
+}
+
+// ─── INIT ───
+loadHistory();
+render();
+</script>
+
+</body>
+</html>
