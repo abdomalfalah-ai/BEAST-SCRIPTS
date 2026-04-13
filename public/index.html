@@ -211,8 +211,6 @@ async function generateScript() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
         system: BRAND.systemPrompt,
         messages: [{ role: "user", content: fullPrompt }],
       }),
@@ -225,9 +223,9 @@ async function generateScript() {
         errMsg = errData.error || errMsg;
       } catch(e) {}
 
-      if (resp.status === 401) errMsg = "Invalid API key. Please update your ANTHROPIC_API_KEY in Render environment settings.";
+      if (resp.status === 400) errMsg = "Invalid API key. Please update GEMINI_API_KEY in Render environment settings.";
       else if (resp.status === 429) errMsg = "Rate limit reached. Please wait a moment and try again.";
-      else if (resp.status === 500) errMsg = "Server error. Please check that ANTHROPIC_API_KEY is set in Render.";
+      else if (resp.status === 500) errMsg = "Server error. Please check that GEMINI_API_KEY is set in Render.";
 
       throw new Error(errMsg);
     }

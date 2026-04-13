@@ -6,8 +6,8 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Rate Limiting ───
 const rateLimitMap = new Map();
-const RATE_LIMIT_WINDOW = 60_000; // 1 minute
-const RATE_LIMIT_MAX = 5; // max 5 requests per minute per IP
+const RATE_LIMIT_WINDOW = 60_000;
+const RATE_LIMIT_MAX = 5;
 
 function rateLimit(req, res, next) {
   const ip = req.headers["x-forwarded-for"] || req.ip;
@@ -28,7 +28,6 @@ function rateLimit(req, res, next) {
   next();
 }
 
-// Clean up rate limit map every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [ip, entry] of rateLimitMap) {
@@ -39,31 +38,45 @@ setInterval(() => {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ─── Streaming API endpoint ───
+// ─── Gemini Streaming API endpoint ───
 app.post("/api/generate", rateLimit, async (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: "API key not configured" });
+    return res.status(500).json({ error: "GEMINI_API_KEY not configured in Render environment." });
   }
 
-  const body = req.body;
-  body.stream = true;
+  const { system, messages } = req.body;
+  const userMessage = messages?.[0]?.content || "";
+
+  const geminiBody = {
+    system_instruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts: [{ text: userMessage }] }],
+    generationConfig: {
+      maxOutputTokens: 1500,
+      temperature: 0.9,
+    },
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(geminiBody),
     });
 
     if (!response.ok) {
-      const data = await response.json();
-      const msg = data?.error?.message || "API request failed";
-      return res.status(response.status).json({ error: msg });
+      let errMsg = `Gemini API error (${response.status})`;
+      try {
+        const errData = await response.json();
+        errMsg = errData?.error?.message || errMsg;
+      } catch(e) {}
+
+      if (response.status === 400) errMsg = "Invalid API key. Please update GEMINI_API_KEY in Render environment.";
+      else if (response.status === 429) errMsg = "Gemini rate limit reached. Please wait and try again.";
+
+      return res.status(response.status).json({ error: errMsg });
     }
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -72,18 +85,37 @@ app.post("/api/generate", rateLimit, async (req, res) => {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let buffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      res.write(decoder.decode(value, { stream: true }));
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const jsonStr = line.slice(6);
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              // Send in a unified format the frontend understands
+              res.write(`data: ${JSON.stringify({ type: "content_block_delta", delta: { text } })}\n\n`);
+            }
+          } catch(e) {}
+        }
+      }
     }
 
+    res.write("data: [DONE]\n\n");
     res.end();
   } catch (err) {
     console.error("API error:", err);
     if (!res.headersSent) {
-      res.status(500).json({ error: "Failed to reach Anthropic API. Please try again." });
+      res.status(500).json({ error: "Failed to reach Gemini API. Please try again." });
     } else {
       res.end();
     }
