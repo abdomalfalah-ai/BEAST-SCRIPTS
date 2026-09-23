@@ -10,7 +10,7 @@
   <meta name="description" content="Beast Coaching AI Script Writer" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
   <title>Beast Scripts</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -88,27 +88,56 @@ Your writing style:
 - Use fitness/training metaphors naturally (the gym is life's classroom)
 - Brand sign-off when appropriate: "Beast Coaching - لا مكان للضعف هنا"
 
+Short-video rules (the first 3 seconds decide everything):
+- The first 3 words must bite. Never open with a greeting, an introduction or "hi guys".
+- Every section must earn the next one: build tension, never let the energy drop.
+- Deliver exactly what the hook promised.
+- End with a natural micro call-to-action (save it, send it to someone who needs it, answer in the comments). Shares matter most.
+
 IMPORTANT: Write ONLY in Arabic. The entire script must be in Arabic (Egyptian dialect preferred with MSA for powerful moments).
-Respond ONLY with the script content. No English. No explanations. No markdown formatting.
-Format the script with clear line breaks between sections for video pacing.`
+Respond ONLY with the script content. No English. No explanations. No markdown formatting (no **, no #).
+Put each section on its own line starting with its time range exactly as given, e.g. [0:00-0:03], then the spoken lines under it with clear line breaks for video pacing.`
 };
 
+// Hook formulas, adapted from github.com/azizaeffendi/video-script-content-system (MIT)
+const HOOKS = [
+  { id:"auto", label:"🎯 Auto", desc:"The AI picks the strongest hook for this topic", instruction:"اختار أقوى نوع هوك يناسب الموضوع." },
+  { id:"challenge", label:"👊 Direct Challenge", desc:"Call out the viewer: \"If you're still making excuses, don't scroll\"", instruction:"ابدأ بتحدي مباشر للمشاهد، زي: \"لو إنت لسه بتأجل، ما تعملش سكرول\"." },
+  { id:"truth", label:"⚡ Hard Truth", desc:"A shocking fact that breaks a common belief", instruction:"ابدأ بحقيقة صادمة بتكسر اعتقاد شائع عند المشاهد." },
+  { id:"controversial", label:"🧨 Controversial", desc:"\"Everyone tells you X… that's a lie\"", instruction:"ابدأ برأي عكس السائد: \"كل الناس بتقولك [كذا]… وده كدب.\"" },
+  { id:"result", label:"🏆 Result First", desc:"Open on the victory, then show the journey", instruction:"ابدأ بالنتيجة النهائية أو لحظة الانتصار، وبعدين ارجع للرحلة اللي وصلت لها." },
+  { id:"relatable", label:"🫵 Relatable Pain", desc:"A struggle the viewer lived this week", instruction:"ابدأ بموقف أو ألم المشاهد عاشه قبل كده، زي: \"لو صحيت النهارده وإنت مش طايق نفسك...\"" },
+  { id:"curiosity", label:"🔒 Curiosity Gap", desc:"Set up a question and hold the answer until the end", instruction:"افتح فجوة فضول: ابدأ بموقف أو سؤال من غير ما تكشف الإجابة، والمشاهد لازم يكمل للآخر عشان يعرفها." },
+  { id:"stakes", label:"⏳ The Stakes", desc:"The price the viewer pays if nothing changes", instruction:"ابدأ بالثمن اللي المشاهد هيدفعه لو فضل زي ما هو." },
+  { id:"interrupt", label:"✋ Pattern Interrupt", desc:"A short, unexpected line: \"Stop. Listen.\"", instruction:"ابدأ بجملة قصيرة جداً وغير متوقعة تكسر السكرول، زي: \"استنى. اسمعني.\"" },
+];
+
+// Video structures, adapted from the same repo's Reels/TikTok formats
+const FORMATS = [
+  { id:"rant", label:"🎙️ Coach Rant", desc:"Straight-to-camera monologue that keeps escalating", instruction:"مونولوج كوتش مباشر للكاميرا: جمل قصيرة، تصعيد مستمر، وكلام موجه للمشاهد بصيغة \"إنت\"." },
+  { id:"story", label:"📖 Story Arc", desc:"Lowest point → struggle → transformation → lesson", instruction:"قصة شخصية: ابدأ من أوطى نقطة، بعدين الرحلة والصراع، وبعدين التحول والدرس." },
+  { id:"myth", label:"💥 Myth Busting", desc:"The lie people believe, then the truth", instruction:"كسر خرافة: اذكر الخرافة اللي الناس مصدقاها، وبعدين الحقيقة بدليل من التمرين والحياة." },
+  { id:"rapid", label:"⚡ Rapid Fire", desc:"Quick-hit rules, one per line, strongest last", instruction:"نقاط سريعة: قواعد أو حقائق ورا بعض، كل واحدة في جملة أو اتنين، والأقوى في الآخر." },
+  { id:"before-after", label:"🔁 Before vs After", desc:"The weak version vs the beast version of the same person", instruction:"زمان ودلوقتي: قارن بين النسخة الضعيفة والنسخة الوحش من نفس الشخص." },
+  { id:"days", label:"📅 Day-X Challenge", desc:"\"I did X for 30 days\": day 1, the middle, the result", instruction:"تحدي أيام: \"عملت [كذا] لمدة [عدد] يوم\"، اليوم الأول، النص، الآخر، وبعدين النتيجة والدرس." },
+];
+
 const TEMPLATES = [
-  { id:"wake-up", icon:"⚡", title:"Wake Up Call", subtitle:"Early Rise & Discipline", prompt:"اكتب سكريبت فيديو تحفيزي قوي عن الصحيان بدري والانضباط الصباحي. أسلوب ديفيد جوجينز. مدة الفيديو دقيقة واحدة.", color:"#FF4500" },
-  { id:"no-excuses", icon:"🔥", title:"No Excuses", subtitle:"Stop Making Excuses", prompt:"اكتب سكريبت تحفيزي عن التوقف عن الأعذار والبدء في العمل. خاطب الشخص اللي بيأجل حياته. أسلوب قوي وصادم. مدة دقيقة.", color:"#DC143C" },
-  { id:"pain", icon:"💀", title:"Embrace The Pain", subtitle:"Pain Is The Way", prompt:"اكتب سكريبت عن احتضان الألم والتعب كوقود للنجاح. اربط بين ألم التمرين وألم الحياة. أسلوب ديفيد جوجينز الخام. مدة دقيقة.", color:"#8B0000" },
-  { id:"haters", icon:"🐺", title:"Let Them Talk", subtitle:"Silence The Doubters", prompt:"اكتب سكريبت تحفيزي عن تجاهل الكارهين والمنتقدين. كيف تحول كلامهم لوقود. أسلوب واثق وقوي. مدة دقيقة.", color:"#4A0E4E" },
-  { id:"discipline", icon:"⛓️", title:"Discipline Over All", subtitle:"Discipline > Motivation", prompt:"اكتب سكريبت عن أن الانضباط أهم من التحفيز. التحفيز بيروح لكن الانضباط بيبني. أسلوب حاد ومباشر. مدة دقيقة.", color:"#1a1a2e" },
-  { id:"transformation", icon:"🦁", title:"Transformation", subtitle:"From Weak To Beast", prompt:"اكتب سكريبت عن رحلة التحول من شخص عادي لوحش. من الضعف للقوة. اجعلها شخصية ومؤثرة. أسلوب سردي قوي. مدة دقيقة ونصف.", color:"#B8860B" },
-  { id:"gym", icon:"🏋️", title:"The Iron Temple", subtitle:"Gym Is Life's Classroom", prompt:"اكتب سكريبت عن الجيم كمدرسة للحياة. كل تمرين درس. كل ألم نمو. اربط التمرين بالنجاح في الحياة. مدة دقيقة.", color:"#2F4F4F" },
+  { id:"wake-up", icon:"⚡", title:"Wake Up Call", subtitle:"Early Rise & Discipline", prompt:"اكتب سكريبت فيديو تحفيزي قوي عن الصحيان بدري والانضباط الصباحي. أسلوب ديفيد جوجينز.", color:"#FF4500" },
+  { id:"no-excuses", icon:"🔥", title:"No Excuses", subtitle:"Stop Making Excuses", prompt:"اكتب سكريبت تحفيزي عن التوقف عن الأعذار والبدء في العمل. خاطب الشخص اللي بيأجل حياته. أسلوب قوي وصادم.", color:"#DC143C" },
+  { id:"pain", icon:"💀", title:"Embrace The Pain", subtitle:"Pain Is The Way", prompt:"اكتب سكريبت عن احتضان الألم والتعب كوقود للنجاح. اربط بين ألم التمرين وألم الحياة. أسلوب ديفيد جوجينز الخام.", color:"#8B0000" },
+  { id:"haters", icon:"🐺", title:"Let Them Talk", subtitle:"Silence The Doubters", prompt:"اكتب سكريبت تحفيزي عن تجاهل الكارهين والمنتقدين. كيف تحول كلامهم لوقود. أسلوب واثق وقوي.", color:"#4A0E4E" },
+  { id:"discipline", icon:"⛓️", title:"Discipline Over All", subtitle:"Discipline > Motivation", prompt:"اكتب سكريبت عن أن الانضباط أهم من التحفيز. التحفيز بيروح لكن الانضباط بيبني. أسلوب حاد ومباشر.", color:"#1a1a2e" },
+  { id:"transformation", icon:"🦁", title:"Transformation", subtitle:"From Weak To Beast", prompt:"اكتب سكريبت عن رحلة التحول من شخص عادي لوحش. من الضعف للقوة. اجعلها شخصية ومؤثرة. أسلوب سردي قوي.", color:"#B8860B" },
+  { id:"gym", icon:"🏋️", title:"The Iron Temple", subtitle:"Gym Is Life's Classroom", prompt:"اكتب سكريبت عن الجيم كمدرسة للحياة. كل تمرين درس. كل ألم نمو. اربط التمرين بالنجاح في الحياة.", color:"#2F4F4F" },
   { id:"custom", icon:"✍️", title:"Custom Script", subtitle:"Write Your Own Idea", prompt:"", color:"#333" }
 ];
 
 const DURATIONS = [
-  { label:"30 Seconds", value:"30 ثانية" },
-  { label:"1 Minute", value:"دقيقة واحدة" },
-  { label:"1.5 Minutes", value:"دقيقة ونصف" },
-  { label:"2 Minutes", value:"دقيقتين" },
+  { label:"30 Seconds", value:"30 ثانية", seconds:30 },
+  { label:"1 Minute", value:"دقيقة واحدة", seconds:60 },
+  { label:"1.5 Minutes", value:"دقيقة ونصف", seconds:90 },
+  { label:"2 Minutes", value:"دقيقتين", seconds:120 },
 ];
 
 const INTENSITIES = [
@@ -124,6 +153,10 @@ let state = {
   customPrompt: "",
   duration: DURATIONS[1],
   intensity: INTENSITIES[1],
+  hook: HOOKS[0],
+  format: FORMATS[0],
+  withNotes: false,
+  withCaption: false,
   loading: false,
   streaming: false,
   generatedScript: "",
@@ -188,6 +221,42 @@ function toggleFavorite(id) {
   render();
 }
 
+function formatTime(sec) {
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+}
+
+// Hook → setup → payoff → micro-CTA, scaled to the chosen length
+function buildPrompt(topic) {
+  const total = state.duration.seconds;
+  const setupEnd = Math.max(8, Math.round(total * 0.2));
+  const valueEnd = Math.round(total * 0.8);
+  const range = (a, b) => `[${formatTime(a)}-${formatTime(b)}]`;
+
+  const parts = [
+    topic,
+    "",
+    `مدة الفيديو المطلوبة: ${state.duration.value} (حوالي ${Math.round(total * 2.5)} كلمة)`,
+    `الأسلوب: ${state.intensity.value}`,
+    `الهوك: ${state.hook.instruction}`,
+    `شكل الفيديو: ${state.format.instruction}`,
+    "",
+    "قسّم السكريبت بالتوقيتات دي بالظبط:",
+    `${range(0, 3)} الهوك: أقوى جملة في الفيديو كله، توقف السكرول.`,
+    `${range(3, setupEnd)} التمهيد: ابني التوتر أو المشكلة.`,
+    `${range(setupEnd, valueEnd)} القلب: نفّذ اللي الهوك وعد بيه، حسب شكل الفيديو.`,
+    `${range(valueEnd, total)} الختام: جملة تفضل في دماغ المشاهد + دعوة بسيطة (احفظ الفيديو / ابعته لحد محتاجه / اكتب في الكومنتات).`,
+  ];
+
+  if (state.withNotes) {
+    parts.push("", "تحت كل قسم ضيف سطرين: \"🎥 المشهد:\" (إيه اللي يظهر في الكادر) و \"📝 على الشاشة:\" (نص قصير أقصى 7 كلمات).");
+  }
+  if (state.withCaption) {
+    parts.push("", "بعد السكريبت اكتب سطر \"———\" وبعده \"الكابشن:\" (جملة هوك + جملتين قيمة + سؤال للكومنتات) وبعدها 5 هاشتاجات.");
+  }
+  parts.push("", "اكتب السكريبت الآن بالعربي فقط.");
+  return parts.join("\n");
+}
+
 function haptic() {
   if (navigator.vibrate) navigator.vibrate(10);
 }
@@ -204,7 +273,7 @@ async function generateScript() {
 
   const t = state.selectedTemplate;
   const prompt = t.id === "custom" ? state.customPrompt : t.prompt;
-  const fullPrompt = `${prompt}\n\nمدة الفيديو المطلوبة: ${state.duration.value}\nالأسلوب: ${state.intensity.value}\n\nاكتب السكريبت الآن بالعربي فقط.`;
+  const fullPrompt = buildPrompt(prompt);
 
   try {
     const resp = await fetch("/api/generate", {
@@ -265,6 +334,8 @@ async function generateScript() {
         icon: t.icon,
         duration: state.duration.label,
         intensity: state.intensity.desc,
+        hook: state.hook.label,
+        format: state.format.label,
         script: state.generatedScript,
         timestamp: new Date().toISOString(),
       };
@@ -389,6 +460,11 @@ function renderGenerate() {
     return `<button onclick="setIntensity(${i})" style="padding:10px 16px;border-radius:10px;border:${sel?'2px solid #FF4500':'1px solid #2a2a2a'};background:${sel?'#FF450020':'#1e1e1e'};color:${sel?'#FF4500':'#f0f0f0'};font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;"><span style="font-size:18px;">${x.label}</span><span>${x.desc}</span></button>`;
   }).join("");
 
+  const chip = (sel, onclick, label) => `<button onclick="${onclick}" style="padding:9px 14px;border-radius:10px;border:${sel?'2px solid #FF4500':'1px solid #2a2a2a'};background:${sel?'#FF450020':'#1e1e1e'};color:${sel?'#FF4500':'#f0f0f0'};font-size:13px;font-weight:700;">${label}</button>`;
+  const hookBtns = HOOKS.map((h, i) => chip(state.hook.id === h.id, `setHook(${i})`, h.label)).join("");
+  const formatBtns = FORMATS.map((f, i) => chip(state.format.id === f.id, `setFormat(${i})`, f.label)).join("");
+  const toggle = (on, key, label) => `<button onclick="toggleOption('${key}')" style="flex:1;padding:12px;border-radius:10px;border:${on?'2px solid #FF4500':'1px solid #2a2a2a'};background:${on?'#FF450020':'#1e1e1e'};color:${on?'#FF4500':'#888'};font-size:13px;font-weight:700;">${on?'✓ ':''}${label}</button>`;
+
   const errorBox = state.error ? `<div style="background:#DC143C22;border:1px solid #DC143C44;border-radius:10px;padding:14px;margin-bottom:16px;font-size:14px;color:#ff6b6b;text-align:center;">${state.error}</div>` : "";
 
   const disabled = state.loading || (t.id === "custom" && !state.customPrompt.trim());
@@ -413,9 +489,29 @@ function renderGenerate() {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">${durationBtns}</div>
       </div>
 
-      <div style="margin-bottom:32px;">
+      <div style="margin-bottom:24px;">
         <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">Intensity Level</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">${intensityBtns}</div>
+      </div>
+
+      <div style="margin-bottom:24px;">
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">Hook: The First 3 Seconds</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${hookBtns}</div>
+        <div style="font-size:12px;color:#666;margin-top:8px;">${state.hook.desc}</div>
+      </div>
+
+      <div style="margin-bottom:24px;">
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">Video Format</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${formatBtns}</div>
+        <div style="font-size:12px;color:#666;margin-top:8px;">${state.format.desc}</div>
+      </div>
+
+      <div style="margin-bottom:32px;">
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:10px;color:#888;">Extras</label>
+        <div style="display:flex;gap:8px;">
+          ${toggle(state.withNotes, 'withNotes', '🎥 Shot + On-Screen Text')}
+          ${toggle(state.withCaption, 'withCaption', '#️⃣ Caption + Hashtags')}
+        </div>
       </div>
 
       ${errorBox}
@@ -445,6 +541,7 @@ function renderResult() {
         <div style="font-size:40px;margin-bottom:8px;">${isStreaming ? '✍️' : (state.error ? '⚠️' : '✅')}</div>
         <h2 style="font-size:22px;font-weight:900;margin:0 0 4px;">${isStreaming ? 'The Beast Is Writing...' : (state.error ? 'Generation Failed' : 'Script Ready')}</h2>
         <p style="font-size:13px;color:#888;margin:0;">${t?t.title:''} &bull; ${state.duration.label} &bull; ${state.intensity.desc}</p>
+        <p style="font-size:12px;color:#666;margin:4px 0 0;">${state.hook.label} hook &bull; ${state.format.label}</p>
       </div>
 
       ${errorBox}
@@ -535,7 +632,7 @@ function renderHistory() {
             <span style="font-size:22px;">${item.icon}</span>
             <div>
               <div style="font-size:15px;font-weight:700;">${item.template}</div>
-              <div style="font-size:11px;color:#888;">${item.duration} &bull; ${item.intensity} &bull; ${words} words &bull; ${readTime}</div>
+              <div style="font-size:11px;color:#888;">${item.duration} &bull; ${item.intensity}${item.format ? ` &bull; ${item.format}` : ''} &bull; ${words} words &bull; ${readTime}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:4px;">
@@ -565,6 +662,9 @@ function nav(view) { state.view = view; render(); window.scrollTo(0,0); haptic()
 function selectTemplate(i) { state.selectedTemplate = TEMPLATES[i]; state.view = "generate"; state.error = ""; render(); window.scrollTo(0,0); haptic(); }
 function setDuration(i) { state.duration = DURATIONS[i]; render(); haptic(); }
 function setIntensity(i) { state.intensity = INTENSITIES[i]; render(); haptic(); }
+function setHook(i) { state.hook = HOOKS[i]; render(); haptic(); }
+function setFormat(i) { state.format = FORMATS[i]; render(); haptic(); }
+function toggleOption(key) { state[key] = !state[key]; render(); haptic(); }
 function regenerate() { state.generatedScript = ""; state.error = ""; state.view = "generate"; render(); }
 
 function viewHistoryItem(i, fromFavorites) {

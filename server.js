@@ -53,7 +53,7 @@ app.post("/api/generate", rateLimit, async (req, res) => {
       { role: "system", content: system },
       ...messages,
     ],
-    max_tokens: 1500,
+    max_tokens: 2500,
     temperature: 0.9,
     stream: true,
   };
