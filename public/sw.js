@@ -1,4 +1,4 @@
-const CACHE_NAME = 'beast-scripts-v1';
+const CACHE_NAME = 'beast-scripts-v2';
 const ASSETS = [
   '/',
   '/index.html',
@@ -28,8 +28,20 @@ self.addEventListener('activate', (event) => {
 
 // Fetch — serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  // Don't cache API calls
-  if (event.request.url.includes('api.anthropic.com')) {
+  // Never cache API calls or non-GET requests
+  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+    return;
+  }
+
+  // Network-first for the page itself so updates show up; cache is the offline fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
+        return response;
+      }).catch(() => caches.match('/index.html'))
+    );
     return;
   }
 
