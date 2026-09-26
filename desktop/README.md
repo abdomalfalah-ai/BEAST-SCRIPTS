@@ -3,6 +3,9 @@
 A standalone desktop app. It carries its own copy of the Beast Scripts screens and talks to the AI directly,
 so there is no server and no hosting bill. Scripts, history and favorites are saved on your PC.
 
+It also includes the **🎬 Reel Builder** (from `reel-maker/builder`): open it from the Reels button in the header.
+It turns your workout clips into a 30-second reel entirely on your PC, with no AI and no internet needed.
+
 ## Pick an AI (both free)
 
 Open **Settings (⚙️)** in the app:

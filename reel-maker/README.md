@@ -4,7 +4,8 @@ Moved out of the Beast Coaching app on 26 Sep 2026 (it was at /coach/app/reel).
 
 ## builder/ : Reel Builder ("full workout in 30 seconds")
 One self-contained page. Everything runs in the browser, and clips never leave the device.
-Open `builder/index.html` from any static server in this folder (for example `npx serve reel-maker/builder`).
+It is built into Beast Scripts: the **🎬 Reels** button opens it at `/reel/` on the website and inside the desktop app.
+To run it on its own, open `builder/index.html` from any static server (for example `npx serve reel-maker/builder`).
 Opening the file directly also works, but some browsers block the logo watermark on `file://`.
 
 ## promo-reel-kit/ : the "How Beast Coaching works" promo reel
