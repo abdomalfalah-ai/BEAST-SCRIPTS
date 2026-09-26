@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0a0c">
+<!-- Runs inside the coach PWA (it sits under the /coach/app scope), so it
+     carries the same shell metadata: opened standalone it must not look like
+     a web page that got loose from the app. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Beast Coach">
+<link rel="manifest" href="/static/coach-pwa/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<title>Reel Builder · Beast Coaching</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel-2:#1c2330; --line:#2b3444;
+    --ink:#e8edf5; --ink-dim:#93a1b5; --ink-faint:#6b7a90;
+    --ok:#2ea86a; --warn:#d9932b; --bad:#d3453f; --red:#e21f1f;
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  a{color:#4a9eff}
+  header{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:var(--panel); border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:20;
+    /* black-translucent status bar: the notch sits over this header. */
+    padding:calc(12px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right))
+            12px calc(18px + env(safe-area-inset-left));
+  }
+  .brand{font-size:18px;font-weight:700}
+  .brand span{color:var(--ink-faint);font-weight:500;font-size:13px;margin-left:8px}
+  .grow{flex:1}
+
+  /* ── Layout ─────────────────────────────────────────────────────── */
+  .wrap{display:flex;gap:18px;padding:18px;align-items:flex-start}
+  /* The header grows by the status-bar inset, so a fixed 70px tucks this
+     column underneath it on any device with one. */
+  .left{width:360px;flex:0 0 360px;position:sticky;top:calc(70px + env(safe-area-inset-top))}
+  .right{flex:1;min-width:0}
+  @media(max-width:900px){
+    .wrap{
+      flex-direction:column; gap:12px;
+      padding:12px calc(12px + env(safe-area-inset-right))
+              calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+    }
+    .left{width:100%;flex:none;position:static}
+    /* Keep the header one row: the strapline is the first thing to go. */
+    header{gap:10px}
+    .brand{font-size:16px}
+    .brand span{display:none}
+    header button{padding:7px 11px;font-size:13px}
+    /* A 9:16 canvas at full phone width is taller than the screen, which
+       buries the transport and the render button. Cap it and centre it. */
+    .stage{display:flex;justify-content:center;background:transparent;border:0}
+    #canvas{max-height:54vh;width:auto;max-width:100%;border-radius:12px;border:1px solid var(--line)}
+    .clip{flex-wrap:wrap}
+    .clip .head{flex-wrap:wrap}
+    .clip .head input[type=text]{flex:1 0 100%;order:-1}
+  }
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:14px}
+  .card h2{margin:0 0 10px;font-size:13px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+
+  /* ── Preview ────────────────────────────────────────────────────── */
+  .stage{background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--line);display:block;width:100%}
+  #canvas{display:block;width:100%;height:auto;background:#000}
+  .transport{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .scrub{flex:1}
+  .tcode{font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink-dim);white-space:nowrap}
+
+  /* ── Controls ───────────────────────────────────────────────────── */
+  button{
+    background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+    border-radius:10px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;
+  }
+  button:hover:not(:disabled){border-color:#3d4a5e;background:#212a38}
+  button:disabled{opacity:.45;cursor:default}
+  button.primary{background:var(--red);border-color:var(--red);color:#fff}
+  button.primary:hover:not(:disabled){background:#c81b1b;border-color:#c81b1b}
+  button.icon{padding:6px 10px;font-size:13px}
+  button.on{background:var(--red);border-color:var(--red);color:#fff}
+  input[type=text],input[type=number],select{
+    background:#0f141c;color:var(--ink);border:1px solid var(--line);
+    border-radius:9px;padding:8px 10px;font:inherit;width:100%;
+  }
+  input[type=range]{width:100%;accent-color:var(--red)}
+  label.fld{display:block;font-size:12px;color:var(--ink-faint);margin:0 0 4px;font-weight:600}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:8px 13px;font-size:13px}
+  .seg button+button{border-left:1px solid var(--line)}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-dim);cursor:pointer;user-select:none}
+  .chk input{accent-color:var(--red);width:16px;height:16px}
+
+  /* ── Drop zone ──────────────────────────────────────────────────── */
+  .drop{
+    border:2px dashed var(--line);border-radius:var(--r);padding:26px 18px;text-align:center;
+    color:var(--ink-dim);cursor:pointer;transition:.15s;
+  }
+  .drop:hover,.drop.hot{border-color:var(--red);background:rgba(226,31,31,.06);color:var(--ink)}
+  .drop b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+  .drop small{font-size:12px;color:var(--ink-faint)}
+
+  /* ── Timeline strip ─────────────────────────────────────────────── */
+  .strip{display:flex;height:34px;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:#0f141c}
+  .strip .blk{
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+    color:#fff;border-right:1px solid rgba(0,0,0,.35);overflow:hidden;white-space:nowrap;min-width:0;cursor:pointer;
+  }
+  .strip .blk:last-child{border-right:0}
+  .strip .blk.intro{background:#3a4354}
+  .strip .gapblk{background:repeating-linear-gradient(45deg,#242c3a,#242c3a 6px,#1a212c 6px,#1a212c 12px);color:var(--ink-faint)}
+  .meter{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-faint);margin-top:6px}
+  .meter b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .meter b.over{color:var(--bad)} .meter b.under{color:var(--warn)}
+
+  /* ── Clip cards ─────────────────────────────────────────────────── */
+  .clip{
+    display:flex;gap:12px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:12px;padding:11px;margin-bottom:10px;
+  }
+  .clip.drag{opacity:.4}
+  .clip.over{border-color:var(--red)}
+  .thumb{
+    width:74px;height:118px;flex:0 0 74px;border-radius:8px;background:#000;object-fit:cover;
+    border:1px solid var(--line);cursor:grab;
+  }
+  .clip .body{flex:1;min-width:0}
+  .clip .head{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .clip .num{
+    width:22px;height:22px;flex:0 0 22px;border-radius:6px;background:var(--red);color:#fff;
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  }
+  .clip .fname{font-size:11px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ctrl{margin-top:9px}
+  .ctrl .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-faint);margin-bottom:3px}
+  .ctrl .lbl b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .badge{font-size:11px;padding:2px 7px;border-radius:999px;background:#0f141c;border:1px solid var(--line);color:var(--ink-dim)}
+  .badge.warnb{color:var(--warn);border-color:#4a3d20}
+
+  .note{font-size:12px;color:var(--ink-faint);line-height:1.5}
+  .banner{border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+  .banner.warn{background:rgba(217,147,43,.12);border:1px solid #4a3d20;color:#e0b464}
+  .banner.bad{background:rgba(211,69,63,.12);border:1px solid #4a2b2b;color:#e78b86}
+  .banner.ok{background:rgba(46,168,106,.12);border:1px solid #23472f;color:#7ed6a4}
+  .hide{display:none!important}
+  /* Source videos live here. Off-screen rather than display:none — a hidden
+     subtree stops decoding on iOS Safari and the canvas draws black. */
+  #pool{position:fixed;left:-10000px;top:0;width:2px;height:2px;overflow:hidden;opacity:.01;pointer-events:none}
+  #pool video{width:2px;height:2px}
+  .empty{text-align:center;color:var(--ink-faint);padding:26px 10px;font-size:14px}
+  #recdot{width:9px;height:9px;border-radius:50%;background:var(--red);display:inline-block;margin-right:6px;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">🎬 Reel Builder <span>full workout in 30 seconds</span></div>
+  <div class="grow"></div>
+  <button onclick="goBack()">← Coach app</button>
+</header>
+
+<div class="wrap">
+
+  <!-- ══ LEFT: preview ══════════════════════════════════════════ -->
+  <div class="left">
+    <div class="card">
+      <h2>Preview</h2>
+      <div class="stage"><canvas id="canvas" width="1080" height="1920"></canvas></div>
+      <div class="transport">
+        <button id="btn-play" class="primary" onclick="togglePlay()" disabled>▶</button>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" value="0" oninput="scrubTo(this.value)" disabled>
+        <span class="tcode" id="tcode">0.0 / 0.0s</span>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="primary grow" id="btn-export" onclick="exportReel()" disabled>⬇ Render &amp; download</button>
+      </div>
+      <div id="exportmsg" class="note" style="margin-top:8px"></div>
+      <div id="result" class="hide" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT: editor ══════════════════════════════════════════ -->
+  <div class="right">
+
+    <div id="banners"></div>
+
+    <div class="card">
+      <h2>1 · Your clips</h2>
+      <div class="drop" id="drop" onclick="document.getElementById('file').click()">
+        <b>Drop workout clips here</b>
+        <small>or tap to choose — they stay on this device, nothing is uploaded</small>
+      </div>
+      <input id="file" type="file" accept="video/*" multiple class="hide" onchange="addFiles(this.files);this.value=''">
+      <div class="row" style="margin-top:10px">
+        <span class="note grow" id="clipcount">No clips yet</span>
+        <button class="icon" onclick="autofit();refresh()" id="btn-refit" disabled>↔ Re-fit evenly</button>
+        <button class="icon" onclick="clearAll()" id="btn-clear" disabled>Clear</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2 · The 30 seconds</h2>
+      <div class="row" style="margin-bottom:10px">
+        <div class="seg" id="targets"></div>
+        <span class="note">Total reel length. Clips share it evenly; lock 🔒 one to protect its slot.</span>
+      </div>
+      <div class="strip" id="strip"><div class="blk gapblk" style="flex:1">empty</div></div>
+      <div class="meter">
+        <span>Used <b id="m-used">0.0s</b> of <b id="m-target">30.0s</b></span>
+        <span id="m-note"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Look</h2>
+      <div class="row" style="gap:16px;margin-bottom:12px">
+        <label class="chk"><input type="checkbox" id="o-labels" checked onchange="S.labels=this.checked;refresh()"> Exercise labels</label>
+        <label class="chk"><input type="checkbox" id="o-progress" checked onchange="S.progress=this.checked;refresh()"> Progress bar</label>
+        <label class="chk"><input type="checkbox" id="o-counter" checked onchange="S.counter=this.checked;refresh()"> Clip counter</label>
+        <label class="chk"><input type="checkbox" id="o-mark" checked onchange="S.watermark=this.checked;refresh()"> Logo</label>
+        <label class="chk"><input type="checkbox" id="o-audio" onchange="setAudio(this.checked)"> Keep clip audio</label>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <label class="chk" style="margin-bottom:9px"><input type="checkbox" id="o-intro" onchange="S.intro.on=this.checked;autofit();refresh()"> Title card</label>
+        <div style="flex:1;min-width:150px">
+          <label class="fld">Title</label>
+          <input type="text" id="i-title" value="FULL WORKOUT" oninput="S.intro.text=this.value;refresh()">
+        </div>
+        <div style="flex:1;min-width:150px">
+          <label class="fld">Under it (Arabic is fine)</label>
+          <input type="text" id="i-sub" value="تمرين كامل في ٣٠ ثانية" oninput="S.intro.sub=this.value;refresh()">
+        </div>
+        <div style="width:110px">
+          <label class="fld">Seconds</label>
+          <input type="number" id="i-idur" value="1.2" min="0.4" max="5" step="0.1" oninput="setIntroDur(this.value)">
+        </div>
+      </div>
+      <div class="note" style="margin-top:10px">
+        Audio is off by default — reels do better with a trending sound added in the Instagram or TikTok app on upload,
+        and the labels carry the video on mute.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4 · Edit each clip</h2>
+      <div id="clips"><div class="empty">Add clips above and they will appear here, already cut to fit.</div></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="pool" aria-hidden="true"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   Reel Builder — everything happens in this browser.
+
+   Why client-side: the app caps uploads at 16 MB and the server has no
+   ffmpeg. A single workout clip off a phone blows past both. So the clips
+   are read straight off disk with object URLs, composited onto a canvas in
+   real time, and recorded with MediaRecorder. Nothing is uploaded, nothing
+   is stored, and the render costs the server nothing.
+   ══════════════════════════════════════════════════════════════════ */
+
+var W = 1080, H = 1920;                 // reel canvas, 9:16
+var MIN_OUT = 0.4;                      // shortest a clip slot may be, seconds
+var SPEED_MIN = 0.25, SPEED_MAX = 4;    // playbackRate range browsers honour
+var TARGETS = [15, 30, 45, 60];
+
+var S = {
+  target: 30, labels: true, progress: true, counter: true, watermark: true, audio: false,
+  intro: { on: false, dur: 1.2, text: 'FULL WORKOUT', sub: 'تمرين كامل في ٣٠ ثانية' }
+};
+var clips = [];
+var uid = 0;
+
+var cv = document.getElementById('canvas');
+var ctx = cv.getContext('2d');
+var logo = new Image();
+var logoOK = false;
+logo.onload = function(){ logoOK = true; refresh(); };
+logo.src = 'logo.png';           // same-origin: keeps the canvas untainted
+
+/* ── Small helpers ───────────────────────────────────────────────── */
+function $(id){ return document.getElementById(id); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function r1(n){ return Math.round(n*10)/10; }
+function fmt(n){ return n.toFixed(1) + 's'; }
+function esc(s){ return String(s||'').replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function isAR(s){ return /[؀-ۿ]/.test(s||''); }
+
+/* ── Clip maths ──────────────────────────────────────────────────────
+   A clip owns an output slot (`out` seconds on the timeline). How much
+   source that slot eats depends on the mode:
+     trim  — 1× speed, so it eats exactly `out` seconds of source and the
+             rest of the take is left on the floor.
+     speed — the whole take from `start` to the end is squeezed (or
+             stretched) into the slot. Good for a slow set you still want
+             whole. */
+function srcLeft(c){ return Math.max(0, c.srcDur - c.start); }
+function speedOf(c){
+  if(c.mode !== 'speed') return 1;
+  var left = srcLeft(c);
+  if(left <= 0 || c.out <= 0) return 1;
+  return clamp(left / c.out, SPEED_MIN, SPEED_MAX);
+}
+function maxOut(c){ return c.mode === 'speed' ? srcLeft(c) / SPEED_MIN : srcLeft(c); }
+function minOut(c){
+  return c.mode === 'speed' ? Math.max(MIN_OUT, srcLeft(c) / SPEED_MAX) : MIN_OUT;
+}
+function introDur(){ return S.intro.on ? S.intro.dur : 0; }
+function clipBudget(){ return Math.max(0, S.target - introDur()); }
+function usedByClips(){ return clips.reduce(function(a,c){ return a + c.out; }, 0); }
+function totalUsed(){ return introDur() + usedByClips(); }
+
+/* Share the budget evenly, but never past what a clip can actually give.
+   Water-filling: hand every unsettled clip an equal share; any clip that
+   can't take its share (too little footage) or must take more than it
+   (a very short take in speed mode) is pinned at its limit and its
+   surplus goes back into the pool for the rest. */
+function autofit(){
+  var free = clips.filter(function(c){ return !c.locked; });
+  var lockedSum = clips.reduce(function(a,c){ return a + (c.locked ? c.out : 0); }, 0);
+  var pool = Math.max(0, clipBudget() - lockedSum);
+  if(!free.length) return;
+
+  var pend = free.slice();
+  free.forEach(function(c){ c._alloc = null; });
+
+  for(var guard = 0; guard < 60 && pend.length; guard++){
+    var share = pool / pend.length;
+    var settled = false;
+    for(var i = pend.length - 1; i >= 0; i--){
+      var c = pend[i], lo = minOut(c), hi = maxOut(c);
+      var pin = share > hi ? hi : (share < lo ? lo : null);
+      if(pin !== null){ c._alloc = pin; pool -= pin; pend.splice(i,1); settled = true; }
+    }
+    if(!settled){
+      var even = pool / pend.length;
+      pend.forEach(function(c){ c._alloc = even; });
+      pend = [];
+    }
+  }
+  free.forEach(function(c){
+    c.out = r1(clamp(c._alloc == null ? minOut(c) : c._alloc, MIN_OUT, 3600));
+    delete c._alloc;
+  });
+}
+
+/* ── Timeline ────────────────────────────────────────────────────── */
+function segments(){
+  var out = [], t = 0;
+  if(introDur() > 0){ out.push({ kind:'intro', t0:0, dur:introDur() }); t = introDur(); }
+  clips.forEach(function(c, i){
+    out.push({ kind:'clip', clip:c, idx:i, t0:t, dur:c.out });
+    t += c.out;
+  });
+  return out;
+}
+function segAt(t){
+  var segs = segments();
+  for(var i = 0; i < segs.length; i++){
+    if(t < segs[i].t0 + segs[i].dur || i === segs.length - 1) return segs[i];
+  }
+  return null;
+}
+
+/* ── Loading clips ───────────────────────────────────────────────── */
+function addFiles(list){
+  var files = [].slice.call(list || []).filter(function(f){
+    return (f.type || '').indexOf('video') === 0 || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(f.name);
+  });
+  if(!files.length){ banner('bad', 'Those were not video files.'); return; }
+  var pending = files.length;
+  files.forEach(function(f){
+    var v = document.createElement('video');
+    v.preload = 'auto'; v.muted = true; v.playsInline = true;
+    v.setAttribute('playsinline', '');
+    v.src = URL.createObjectURL(f);
+    var c = {
+      id: ++uid, file: f, video: v,
+      name: f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 40),
+      srcDur: 0, start: 0, out: 3, mode: 'trim', locked: false, thumb: null, bad: false
+    };
+    v.onloadedmetadata = function(){
+      measure(v, function(d){
+        c.srcDur = d;
+        if(!c.srcDur) c.bad = true;
+        done();
+      });
+    };
+    v.onerror = function(){ c.bad = true; done(); };
+    clips.push(c);
+    function done(){
+      if(!c.bad) grabThumb(c);
+      if(--pending === 0){ autofit(); refresh(); }
+      else refresh();
+    }
+  });
+  clips.forEach(function(c){ if(c.video.parentNode !== $('pool')) $('pool').appendChild(c.video); });
+}
+
+/* How long is this take?
+
+   Anything written as a stream — a MediaRecorder .webm, some screen
+   recordings, the odd clip a messaging app re-muxed — carries no duration in
+   its header, and `video.duration` reads Infinity forever. Seeking past the
+   end forces the browser to scan for the real length. Without this those
+   clips look like zero-length files and the builder refuses them. */
+function measure(v, cb){
+  if(isFinite(v.duration) && v.duration > 0) return cb(v.duration);
+  var settled = false;
+  function finish(d){
+    if(settled) return;
+    settled = true;
+    v.removeEventListener('durationchange', onDur);
+    v.removeEventListener('timeupdate', onDur);
+    try{ v.currentTime = 0; }catch(e){}
+    cb(isFinite(d) && d > 0 ? d : 0);
+  }
+  function onDur(){ if(isFinite(v.duration) && v.duration > 0) finish(v.duration); }
+  v.addEventListener('durationchange', onDur);
+  v.addEventListener('timeupdate', onDur);
+  try{ v.currentTime = 1e101; }
+  catch(e){ finish(0); return; }
+  setTimeout(function(){ finish(v.duration); }, 5000);   // give up rather than hang
+}
+
+/* A poster frame for the card, taken a beat after the in-point so it is not
+   the black first frame every phone camera starts on. */
+function grabThumb(c){
+  var v = c.video, t = Math.min(c.start + 0.15, Math.max(0, c.srcDur - 0.05));
+  var tc = document.createElement('canvas'); tc.width = 148; tc.height = 236;
+  function shoot(){
+    v.removeEventListener('seeked', shoot);
+    try{
+      var g = tc.getContext('2d');
+      g.fillStyle = '#000'; g.fillRect(0,0,tc.width,tc.height);
+      cover(g, v, tc.width, tc.height);
+      c.thumb = tc.toDataURL('image/jpeg', 0.6);
+    }catch(e){ /* a codec the browser can decode but not read back — skip it */ }
+    refresh();
+  }
+  v.addEventListener('seeked', shoot);
+  try{ v.currentTime = t; }catch(e){}
+}
+
+function clearAll(){
+  if(clips.length && !confirm('Remove all clips?')) return;
+  stop();
+  clips.forEach(function(c){ try{ URL.revokeObjectURL(c.video.src); }catch(e){} if(c.video.parentNode) c.video.parentNode.removeChild(c.video); });
+  clips = [];
+  refresh();
+}
+function removeClip(id){
+  var i = clips.findIndex(function(c){ return c.id === id; });
+  if(i < 0) return;
+  stop();
+  var c = clips[i];
+  try{ URL.revokeObjectURL(c.video.src); }catch(e){}
+  if(c.video.parentNode) c.video.parentNode.removeChild(c.video);
+  clips.splice(i, 1);
+  autofit(); refresh();
+}
+function move(id, delta){
+  var i = clips.findIndex(function(c){ return c.id === id; });
+  var j = i + delta;
+  if(i < 0 || j < 0 || j >= clips.length) return;
+  var t = clips[i]; clips[i] = clips[j]; clips[j] = t;
+  refresh();
+}
+
+/* ── Per-clip edits ──────────────────────────────────────────────── */
+function byId(id){ return clips.find(function(c){ return c.id === id; }); }
+function setStart(id, v){
+  var c = byId(id); if(!c) return;
+  c.start = clamp(parseFloat(v) || 0, 0, Math.max(0, c.srcDur - MIN_OUT));
+  if(c.mode === 'trim') c.out = clamp(c.out, MIN_OUT, Math.max(MIN_OUT, srcLeft(c)));
+  redistribute(c);
+  live(c);
+}
+function setOut(id, v){
+  var c = byId(id); if(!c) return;
+  c.out = r1(clamp(parseFloat(v) || MIN_OUT, minOut(c), maxOut(c)));
+  c.locked = true;                       // touching a slot by hand pins it
+  redistribute(c);
+  live(c);
+}
+
+/* While a slider is under the finger, repaint everything EXCEPT the card
+   markup: rebuilding the list mid-drag drops the input the browser is
+   tracking and the drag dies. The full repaint waits for release (onchange). */
+function live(c){
+  syncLabels();
+  paintStrip();
+  paintBanners();
+  if(!playing) drawAt(preferSeg(c));
+}
+function preferSeg(c){
+  // Park the playhead inside the clip being edited, so the canvas shows the
+  // frame the slider is choosing.
+  var seg = segments().find(function(s){ return s.kind === 'clip' && s.clip === c; });
+  return seg ? seg.t0 + 0.02 : playhead;
+}
+function syncLabels(){
+  clips.forEach(function(c){
+    var a = $('s-lab-' + c.id); if(a) a.textContent = fmt(c.start);
+    var b = $('o-lab-' + c.id); if(b) b.textContent = fmt(c.out);
+    var sr = $('s-rng-' + c.id); if(sr && document.activeElement !== sr) sr.value = c.start;
+    var or_ = $('o-rng-' + c.id); if(or_ && document.activeElement !== or_) or_.value = c.out;
+  });
+}
+function setMode(id, m){
+  var c = byId(id); if(!c) return;
+  c.mode = m;
+  c.out = clamp(c.out, minOut(c), maxOut(c));
+  redistribute(c);
+  refresh();
+}
+function toggleLock(id){
+  var c = byId(id); if(!c) return;
+  c.locked = !c.locked;
+  autofit(); refresh();
+}
+function setName(id, v){ var c = byId(id); if(c){ c.name = v; drawAt(playhead); paintStrip(); } }
+
+/* One clip changed by hand — re-fit only the clips still floating, so the
+   edit lands and the other slots absorb it instead of fighting back. */
+function redistribute(changed){
+  var wasLocked = changed.locked;
+  changed.locked = true;
+  autofit();
+  changed.locked = wasLocked;
+}
+
+function setIntroDur(v){
+  S.intro.dur = clamp(parseFloat(v) || 1.2, 0.4, 5);
+  autofit(); refresh();
+}
+function setTarget(t){ S.target = t; autofit(); refresh(); }
+
+/* ══ Drawing ══════════════════════════════════════════════════════ */
+function cover(g, src, w, h){
+  var sw = src.videoWidth || src.width, sh = src.videoHeight || src.height;
+  if(!sw || !sh) return;
+  var k = Math.max(w/sw, h/sh), dw = sw*k, dh = sh*k;
+  try{ g.drawImage(src, (w-dw)/2, (h-dh)/2, dw, dh); }catch(e){}
+}
+
+function roundRect(g, x, y, w, h, r){
+  g.beginPath();
+  g.moveTo(x+r, y);
+  g.arcTo(x+w, y, x+w, y+h, r);
+  g.arcTo(x+w, y+h, x, y+h, r);
+  g.arcTo(x, y+h, x, y, r);
+  g.arcTo(x, y, x+w, y, r);
+  g.closePath();
+}
+
+function drawFrame(t){
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  var total = totalUsed();
+  var seg = segAt(t);
+  if(!seg){ drawIdle(); return; }
+
+  if(seg.kind === 'intro') drawIntro((t - seg.t0) / Math.max(0.001, seg.dur));
+  else cover(ctx, seg.clip.video, W, H);
+
+  // Labels sit above a soft gradient so white text survives a bright gym.
+  if(seg.kind === 'clip'){
+    var grad = ctx.createLinearGradient(0, 0, 0, 420);
+    grad.addColorStop(0, 'rgba(0,0,0,.62)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, 420);
+    var g2 = ctx.createLinearGradient(0, H - 380, 0, H);
+    g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, 'rgba(0,0,0,.70)');
+    ctx.fillStyle = g2; ctx.fillRect(0, H - 380, W, 380);
+
+    // An Arabic label is right-aligned, so it would land on top of a
+    // right-hand counter. Put the counter on whichever side the label is not.
+    var ar = isAR(seg.clip.name);
+    var cw = S.counter ? drawCounter(seg.idx + 1, clips.length, ar ? 'left' : 'right') : 0;
+    if(S.labels && seg.clip.name) drawLabel(seg.clip.name, ar, cw);
+  }
+
+  if(S.watermark && logoOK) drawMark();
+  if(S.progress && total > 0) drawProgress(clamp(t / total, 0, 1));
+}
+
+function drawIdle(){
+  ctx.fillStyle = '#12161d'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#3a4354';
+  ctx.font = '600 46px Arial, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Add clips to start', W/2, H/2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+function drawIntro(p){
+  // Red wash that settles, so the card has motion even at 1.2 seconds.
+  var g = ctx.createRadialGradient(W/2, H*0.34, 60, W/2, H*0.34, 1200);
+  g.addColorStop(0, 'rgba(226,31,31,' + (0.30 - 0.16*p).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  var ease = 1 - Math.pow(1 - clamp(p/0.45, 0, 1), 3);
+  ctx.save();
+  ctx.globalAlpha = ease;
+  ctx.translate(0, (1 - ease) * 40);
+  ctx.textAlign = 'center';
+
+  var title = S.intro.text || '';
+  ctx.font = '900 ' + fitFont(title, W - 160, 108, 46, '900 %spx "Arial Black", Arial, sans-serif') + 'px "Arial Black", Arial, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(title.toUpperCase(), W/2, H*0.46);
+
+  ctx.fillStyle = '#e21f1f';
+  roundRect(ctx, W/2 - 150*ease, H*0.485, 300*ease, 10, 5); ctx.fill();
+
+  var sub = S.intro.sub || '';
+  if(sub){
+    ctx.direction = isAR(sub) ? 'rtl' : 'ltr';
+    ctx.font = '700 ' + fitFont(sub, W - 200, 58, 30, '700 %spx Arial, sans-serif') + 'px Arial, sans-serif';
+    ctx.fillStyle = '#d8dde4';
+    ctx.fillText(sub, W/2, H*0.56);
+    ctx.direction = 'ltr';
+  }
+  ctx.restore();
+  ctx.textAlign = 'left';
+}
+
+/* Shrink a font until the string fits the width — long exercise names and
+   Arabic subtitles both overflow at a fixed size. */
+function fitFont(text, maxW, start, min, tpl){
+  var size = start;
+  while(size > min){
+    ctx.font = tpl.replace('%s', size);
+    if(ctx.measureText(text).width <= maxW) break;
+    size -= 2;
+  }
+  return size;
+}
+
+function drawLabel(name, ar, reserve){
+  var pad = 30, x = 56, y = 120;
+  ctx.direction = ar ? 'rtl' : 'ltr';
+  // Leave the counter its corner: a long exercise name must shrink rather
+  // than slide under it.
+  var room = W - 2*x - 2*pad - (reserve ? reserve + 24 : 0);
+  var size = fitFont(name, room, 62, 30, '900 %spx "Arial Black", Arial, sans-serif');
+  ctx.font = '900 ' + size + 'px "Arial Black", Arial, sans-serif';
+  var tw = Math.min(ctx.measureText(name).width, room);
+  var bw = tw + 2*pad, bh = size + 30;
+  var bx = ar ? (W - x - bw) : x;
+  ctx.fillStyle = 'rgba(226,31,31,.92)';
+  roundRect(ctx, bx, y, bw, bh, 14); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = ar ? 'right' : 'left';
+  ctx.fillText(name, ar ? (bx + bw - pad) : (bx + pad), y + bh/2 + 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.direction = 'ltr';
+}
+
+/* Draws the "3/4" badge on the given side and reports how wide it came out,
+   so the label knows how much room it may not use. */
+function drawCounter(i, n, side){
+  var txt = i + '/' + n;
+  ctx.font = '900 46px "Arial Black", Arial, sans-serif';
+  var bw = ctx.measureText(txt).width + 44, bh = 70, y = 131;
+  var bx = side === 'left' ? 56 : (W - 56 - bw);
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  roundRect(ctx, bx, y, bw, bh, bh/2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(txt, bx + bw/2, y + bh/2 + 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  return bw;
+}
+
+function drawProgress(p){
+  var y = H - 92, h = 12, m = 56, w = W - 2*m;
+  ctx.fillStyle = 'rgba(255,255,255,.22)';
+  roundRect(ctx, m, y, w, h, 6); ctx.fill();
+  ctx.fillStyle = '#e21f1f';
+  roundRect(ctx, m, y, Math.max(h, w*p), h, 6); ctx.fill();
+
+  // Ticks at every clip boundary, so a viewer sees how many are left.
+  var total = totalUsed();
+  if(total > 0){
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    segments().forEach(function(s){
+      if(s.t0 <= 0) return;
+      ctx.fillRect(m + w*(s.t0/total) - 2, y, 4, h);
+    });
+  }
+}
+
+function drawMark(){
+  var mw = 150, mh = mw * (logo.height / (logo.width || 1));
+  ctx.globalAlpha = 0.75;
+  try{ ctx.drawImage(logo, 56, H - 92 - mh - 26, mw, mh); }catch(e){}
+  ctx.globalAlpha = 1;
+}
+
+/* ══ Playback engine ══════════════════════════════════════════════
+   The clock is performance.now(), not the video element. Decode hiccups
+   then cost a dropped frame instead of pushing the reel past 30 seconds —
+   which matters because MediaRecorder captures this canvas in real time. */
+var playhead = 0, playing = false, rafId = 0, clockStart = 0, clockBase = 0;
+var activeSeg = null, recording = false;
+var onFinish = null;
+
+function drawAt(t){
+  playhead = t;
+  var seg = segAt(t);
+  if(seg && seg.kind === 'clip' && !playing){
+    // Scrubbing: park the source frame under the playhead.
+    var c = seg.clip, want = c.start + (t - seg.t0) * speedOf(c);
+    if(Math.abs(c.video.currentTime - want) > 0.05){
+      try{ c.video.currentTime = clamp(want, 0, Math.max(0, c.srcDur - 0.03)); }catch(e){}
+    }
+  }
+  drawFrame(t);
+  paintTime();
+}
+
+function activate(seg){
+  if(activeSeg === seg) return;
+  if(activeSeg && activeSeg.kind === 'clip'){
+    try{ activeSeg.clip.video.pause(); }catch(e){}
+    gainFor(activeSeg.clip, 0);
+  }
+  activeSeg = seg;
+  if(seg && seg.kind === 'clip'){
+    var c = seg.clip, v = c.video;
+    try{ v.currentTime = clamp(c.start, 0, Math.max(0, c.srcDur - 0.03)); }catch(e){}
+    v.playbackRate = clamp(speedOf(c), SPEED_MIN, SPEED_MAX);
+    v.muted = !S.audio;
+    gainFor(c, S.audio ? 1 : 0);
+    var pr = v.play();
+    if(pr && pr.catch) pr.catch(function(){});
+  }
+  // Warm the next clip while this one plays — a cold seek at the cut shows
+  // as a frozen frame in the recording.
+  var segs = segments(), i = segs.indexOf(seg);
+  var nxt = segs[i+1];
+  if(nxt && nxt.kind === 'clip'){
+    try{ nxt.clip.video.currentTime = clamp(nxt.clip.start, 0, Math.max(0, nxt.clip.srcDur - 0.03)); }catch(e){}
+  }
+}
+
+function tick(){
+  if(!playing) return;
+  var t = clockBase + (performance.now() - clockStart) / 1000;
+  var total = totalUsed();
+  if(t >= total){
+    drawFrame(total);
+    finish();
+    return;
+  }
+  var seg = segAt(t);
+  if(seg !== activeSeg) activate(seg);
+  playhead = t;
+  drawFrame(t);
+  paintTime();
+  rafId = requestAnimationFrame(tick);
+}
+
+function play(from){
+  if(!clips.length || playing) return;
+  clockBase = (from == null ? (playhead >= totalUsed() - 0.05 ? 0 : playhead) : from);
+  clockStart = performance.now();
+  playing = true;
+  activeSeg = null;
+  activate(segAt(clockBase));
+  $('btn-play').textContent = '⏸';
+  rafId = requestAnimationFrame(tick);
+}
+function stop(){
+  playing = false;
+  if(rafId) cancelAnimationFrame(rafId);
+  rafId = 0;
+  if(activeSeg && activeSeg.kind === 'clip'){ try{ activeSeg.clip.video.pause(); }catch(e){} }
+  activeSeg = null;
+  $('btn-play').textContent = '▶';
+}
+function finish(){
+  stop();
+  playhead = totalUsed();
+  paintTime();
+  if(onFinish){ var f = onFinish; onFinish = null; f(); }
+}
+function togglePlay(){ playing ? stop() : play(); }
+function scrubTo(v){
+  if(playing) stop();
+  drawAt(totalUsed() * (parseFloat(v)/1000));
+}
+
+/* ══ Audio graph ══════════════════════════════════════════════════
+   MediaRecorder only picks up audio that reaches a MediaStream, so every
+   clip's element is routed through WebAudio into one destination node and
+   gated by a gain — only the clip on screen is audible. */
+var actx = null, adest = null;
+function audioGraph(){
+  if(actx) return actx;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  actx = new AC();
+  adest = actx.createMediaStreamDestination();
+  return actx;
+}
+function setAudio(on){
+  S.audio = on;
+  if(on) audioGraph();                    // the click is the gesture it needs
+  if(actx && actx.state === 'suspended') actx.resume();
+  clips.forEach(function(c){
+    c.video.muted = !on;
+    if(on && activeSeg && activeSeg.kind === 'clip' && activeSeg.clip === c) gainFor(c, 1);
+    else gainFor(c, 0);
+  });
+  refresh();
+}
+function gainFor(c, value){
+  if(!actx) return;
+  if(!c._gain){
+    // Only route an element once audio is actually wanted: a
+    // MediaElementAudioSourceNode permanently steals the element's output,
+    // and it can never be undone for that element.
+    if(!value) return;
+    try{
+      c._src = actx.createMediaElementSource(c.video);   // once per element, ever
+      c._gain = actx.createGain();
+      c._src.connect(c._gain);
+      c._gain.connect(adest);
+      c._gain.connect(actx.destination);
+    }catch(e){ return; }
+  }
+  try{ c._gain.gain.setTargetAtTime(value, actx.currentTime, 0.01); }catch(e){}
+}
+
+/* ══ Export ══════════════════════════════════════════════════════ */
+var MIMES = [
+  'video/mp4;codecs=avc1.4d002a,mp4a.40.2',
+  'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+  'video/mp4',
+  'video/webm;codecs=vp9,opus',
+  'video/webm;codecs=vp8,opus',
+  'video/webm'
+];
+function pickMime(){
+  if(!window.MediaRecorder) return null;
+  for(var i = 0; i < MIMES.length; i++){
+    try{ if(MediaRecorder.isTypeSupported(MIMES[i])) return MIMES[i]; }catch(e){}
+  }
+  return '';
+}
+
+function exportReel(){
+  if(!clips.length || recording) return;
+  var mime = pickMime();
+  if(mime === null){
+    banner('bad', 'This browser cannot record video. Use Chrome, Edge, or Safari 15+.');
+    return;
+  }
+  stop();
+
+  if(S.audio) audioGraph();
+  if(actx && actx.state === 'suspended') actx.resume();
+
+  var stream;
+  try{ stream = cv.captureStream(30); }
+  catch(e){ banner('bad', 'This browser will not let a canvas be recorded.'); return; }
+
+  if(S.audio && adest){
+    adest.stream.getAudioTracks().forEach(function(tr){ stream.addTrack(tr); });
+  }
+
+  var opts = { videoBitsPerSecond: 9000000 };
+  if(mime) opts.mimeType = mime;
+  var rec;
+  try{ rec = new MediaRecorder(stream, opts); }
+  catch(e){
+    try{ rec = new MediaRecorder(stream); }
+    catch(e2){ banner('bad', 'Recording failed to start: ' + e2.message); return; }
+  }
+
+  var chunks = [];
+  rec.ondataavailable = function(ev){ if(ev.data && ev.data.size) chunks.push(ev.data); };
+  rec.onstop = function(){
+    recording = false;
+    setBusy(false);
+    var type = rec.mimeType || mime || 'video/webm';
+    var blob = new Blob(chunks, { type: type });
+    var ext = type.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+    showResult(blob, ext);
+  };
+
+  recording = true;
+  setBusy(true);
+  $('exportmsg').innerHTML = '<span id="recdot"></span>Recording ' + fmt(totalUsed()) +
+    ' in real time — keep this tab in front until it finishes.';
+
+  onFinish = function(){
+    // A beat of tail so the last frame is not clipped by the encoder.
+    setTimeout(function(){ try{ rec.stop(); }catch(e){} }, 250);
+  };
+  rec.start(200);
+  drawAt(0);
+  play(0);
+}
+
+function showResult(blob, ext){
+  var url = URL.createObjectURL(blob);
+  var stamp = new Date().toISOString().slice(0,10);
+  var name = 'beast-workout-reel-' + stamp + '.' + ext;
+  var kb = Math.round(blob.size / 1024);
+  var size = kb > 1024 ? (kb/1024).toFixed(1) + ' MB' : kb + ' KB';
+  var box = $('result');
+  box.className = '';
+  box.innerHTML =
+    '<div class="banner ok">Rendered · ' + fmt(totalUsed()) + ' · ' + size + ' · ' + ext.toUpperCase() + '</div>' +
+    '<video src="' + url + '" controls playsinline style="width:100%;border-radius:10px;background:#000"></video>' +
+    '<a id="dl" href="' + url + '" download="' + name + '"></a>';
+  $('exportmsg').textContent = ext === 'webm'
+    ? 'Saved as .webm — Instagram and TikTok both accept it. Convert to .mp4 only if an app refuses it.'
+    : '';
+  var a = $('dl'); a.click();
+}
+
+function setBusy(b){
+  ['btn-export','btn-play','btn-refit','btn-clear','file'].forEach(function(id){
+    var el = $(id); if(el) el.disabled = b || (id !== 'file' && !clips.length);
+  });
+  $('btn-export').textContent = b ? '● Recording…' : '⬇ Render & download';
+}
+
+/* ══ UI painting ══════════════════════════════════════════════════ */
+function refresh(){ paintTargets(); paintStrip(); paintCards(); paintBanners(); paintTime(); drawFrame(playhead); }
+
+function paintTargets(){
+  $('targets').innerHTML = TARGETS.map(function(t){
+    return '<button class="' + (S.target === t ? 'on' : '') + '" onclick="setTarget(' + t + ')">' + t + 's</button>';
+  }).join('');
+  $('m-target').textContent = fmt(S.target);
+}
+
+function paintStrip(){
+  var strip = $('strip'), total = totalUsed(), target = S.target;
+  var segs = segments();
+  if(!segs.length){
+    strip.innerHTML = '<div class="blk gapblk" style="flex:1">empty</div>';
+  } else {
+    var span = Math.max(total, target);
+    var html = segs.map(function(s, i){
+      var pct = (s.dur / span) * 100;
+      if(s.kind === 'intro')
+        return '<div class="blk intro" style="flex:0 0 ' + pct + '%" title="Title card">T</div>';
+      var hue = (s.idx * 47) % 360;
+      return '<div class="blk" style="flex:0 0 ' + pct + '%;background:hsl(' + hue + ',52%,42%)" ' +
+             'title="' + esc(s.clip.name) + ' · ' + fmt(s.dur) + '" onclick="scrubSeg(' + s.t0 + ')">' +
+             (pct > 6 ? (s.idx + 1) : '') + '</div>';
+    }).join('');
+    if(total < target - 0.05){
+      html += '<div class="blk gapblk" style="flex:0 0 ' + ((target-total)/span*100) + '%">' +
+              fmt(target-total) + ' short</div>';
+    }
+    strip.innerHTML = html;
+  }
+  var used = $('m-used');
+  used.textContent = fmt(total);
+  used.className = total > target + 0.05 ? 'over' : (total < target - 0.05 ? 'under' : '');
+  $('m-note').textContent = clips.length
+    ? clips.length + ' clip' + (clips.length === 1 ? '' : 's') +
+      (introDur() ? ' + title card' : '')
+    : '';
+  $('clipcount').textContent = clips.length
+    ? clips.length + ' clip' + (clips.length === 1 ? '' : 's') + ' loaded'
+    : 'No clips yet';
+}
+function scrubSeg(t0){ if(playing) stop(); drawAt(t0 + 0.05); }
+
+function paintCards(){
+  var box = $('clips');
+  if(!clips.length){
+    box.innerHTML = '<div class="empty">Add clips above and they will appear here, already cut to fit.</div>';
+    return;
+  }
+  box.innerHTML = clips.map(function(c, i){
+    if(c.bad){
+      return '<div class="clip"><div class="body"><div class="banner bad" style="margin:0">' +
+        esc(c.file.name) + ' — this browser cannot decode that file. ' +
+        '<button class="icon" onclick="removeClip(' + c.id + ')">Remove</button></div></div></div>';
+    }
+    var sp = speedOf(c), left = srcLeft(c);
+    var over = c.mode === 'trim' && c.out > left + 0.05;
+    return '' +
+    '<div class="clip" data-id="' + c.id + '" draggable="true">' +
+      (c.thumb ? '<img class="thumb" src="' + c.thumb + '">' : '<div class="thumb"></div>') +
+      '<div class="body">' +
+        '<div class="head">' +
+          '<span class="num">' + (i+1) + '</span>' +
+          '<input type="text" value="' + esc(c.name) + '" placeholder="Exercise name (shown on the video)" ' +
+                 'oninput="setName(' + c.id + ',this.value)">' +
+          '<button class="icon" title="Move up" onclick="move(' + c.id + ',-1)"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+          '<button class="icon" title="Move down" onclick="move(' + c.id + ',1)"' + (i === clips.length-1 ? ' disabled' : '') + '>↓</button>' +
+          '<button class="icon" title="Remove" onclick="removeClip(' + c.id + ')">✕</button>' +
+        '</div>' +
+        '<div class="row" style="gap:8px">' +
+          '<div class="seg">' +
+            '<button class="' + (c.mode === 'trim' ? 'on' : '') + '" onclick="setMode(' + c.id + ',\'trim\')" ' +
+              'title="Cut the take down to the slot">Trim</button>' +
+            '<button class="' + (c.mode === 'speed' ? 'on' : '') + '" onclick="setMode(' + c.id + ',\'speed\')" ' +
+              'title="Squeeze the whole take into the slot">Speed</button>' +
+          '</div>' +
+          '<span class="badge">' + fmt(c.srcDur) + ' source</span>' +
+          (c.mode === 'speed' ? '<span class="badge">' + sp.toFixed(2) + '×</span>' : '') +
+          (over ? '<span class="badge warnb">only ' + fmt(left) + ' left after the in-point</span>' : '') +
+          '<span class="grow"></span>' +
+          '<button class="icon ' + (c.locked ? 'on' : '') + '" onclick="toggleLock(' + c.id + ')" ' +
+            'title="Lock this slot so re-fitting leaves it alone">' + (c.locked ? '🔒' : '🔓') + '</button>' +
+        '</div>' +
+        '<div class="ctrl">' +
+          '<div class="lbl"><span>Start at</span><b id="s-lab-' + c.id + '">' + fmt(c.start) + '</b></div>' +
+          '<input type="range" id="s-rng-' + c.id + '" min="0" ' +
+                 'max="' + Math.max(0.1, c.srcDur - MIN_OUT).toFixed(2) + '" step="0.05" ' +
+                 'value="' + c.start + '" oninput="setStart(' + c.id + ',this.value)" ' +
+                 'onchange="grabThumb(byId(' + c.id + '));paintCards()">' +
+        '</div>' +
+        '<div class="ctrl">' +
+          '<div class="lbl"><span>Shows for</span><b id="o-lab-' + c.id + '">' + fmt(c.out) + '</b></div>' +
+          '<input type="range" id="o-rng-' + c.id + '" min="' + minOut(c).toFixed(2) + '" ' +
+                 'max="' + Math.max(minOut(c)+0.1, Math.min(maxOut(c), S.target)).toFixed(2) + '" ' +
+                 'step="0.1" value="' + c.out + '" oninput="setOut(' + c.id + ',this.value)" ' +
+                 'onchange="paintCards()">' +
+        '</div>' +
+        '<div class="fname">' + esc(c.file.name) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  wireDrag();
+}
+
+function paintBanners(){
+  var out = [], total = totalUsed(), n = clips.length;
+  if(n && total < S.target - 0.3){
+    out.push(['warn', 'The reel is ' + fmt(S.target - total) + ' short of ' + S.target + 's. ' +
+      'Add another clip, or switch a clip to <b>Speed</b> so it stretches to fill the gap.']);
+  }
+  if(n && total > S.target + 0.3){
+    out.push(['warn', 'Locked clips add up to ' + fmt(total) + ', past the ' + S.target + 's target. ' +
+      'Unlock one, or press <b>Re-fit evenly</b>.']);
+  }
+  if(n && !window.MediaRecorder){
+    out.push(['bad', 'This browser cannot record video, so rendering is unavailable. Preview still works.']);
+  }
+  $('banners').innerHTML = out.map(function(b){
+    return '<div class="banner ' + b[0] + '">' + b[1] + '</div>';
+  }).join('');
+}
+
+function banner(kind, msg){
+  $('banners').insertAdjacentHTML('afterbegin', '<div class="banner ' + kind + '">' + msg + '</div>');
+}
+
+function paintTime(){
+  var total = totalUsed();
+  $('tcode').textContent = playhead.toFixed(1) + ' / ' + total.toFixed(1) + 's';
+  var sc = $('scrub');
+  if(!recording) sc.value = total > 0 ? Math.round(playhead/total*1000) : 0;
+  var has = clips.length > 0;
+  if(!recording){
+    ['btn-play','btn-export','btn-refit','btn-clear'].forEach(function(id){ $(id).disabled = !has; });
+    sc.disabled = !has;
+  }
+}
+
+/* ── Drag to reorder ─────────────────────────────────────────────── */
+var dragId = null;
+function wireDrag(){
+  [].forEach.call(document.querySelectorAll('.clip[data-id]'), function(el){
+    el.ondragstart = function(e){
+      dragId = +el.dataset.id;
+      el.classList.add('drag');
+      try{ e.dataTransfer.setData('text/plain', String(dragId)); }catch(err){}
+      e.dataTransfer.effectAllowed = 'move';
+    };
+    el.ondragend = function(){ el.classList.remove('drag'); dragId = null;
+      [].forEach.call(document.querySelectorAll('.clip'), function(x){ x.classList.remove('over'); }); };
+    el.ondragover = function(e){ if(dragId != null){ e.preventDefault(); el.classList.add('over'); } };
+    el.ondragleave = function(){ el.classList.remove('over'); };
+    el.ondrop = function(e){
+      e.preventDefault();
+      el.classList.remove('over');
+      var to = +el.dataset.id;
+      if(dragId == null || to === dragId) return;
+      var from = clips.findIndex(function(c){ return c.id === dragId; });
+      var at = clips.findIndex(function(c){ return c.id === to; });
+      if(from < 0 || at < 0) return;
+      var moved = clips.splice(from, 1)[0];
+      clips.splice(at, 0, moved);
+      stop(); refresh();
+    };
+  });
+}
+
+/* ── Drop files anywhere ─────────────────────────────────────────── */
+var dz = $('drop');
+['dragenter','dragover'].forEach(function(ev){
+  document.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('hot'); });
+});
+['dragleave','drop'].forEach(function(ev){
+  document.addEventListener(ev, function(e){
+    e.preventDefault();
+    if(ev === 'dragleave' && e.relatedTarget) return;
+    dz.classList.remove('hot');
+  });
+});
+document.addEventListener('drop', function(e){
+  if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+/* Space plays, as it does in every editor. */
+document.addEventListener('keydown', function(e){
+  if(e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT'){
+    e.preventDefault(); togglePlay();
+  }
+});
+
+/* history.back() keeps the PWA's own navigation stack intact when the coach
+   arrived from the Tools list; a cold open (a launcher shortcut) has nothing
+   to go back to, so fall through to the deck. */
+function goBack(){
+  if(document.referrer && document.referrer.indexOf(location.origin) === 0) history.back();
+  else location.href = '/coach/app';
+}
+
+$('i-title').value = S.intro.text;
+$('i-sub').value = S.intro.sub;
+refresh();
+</script>
+</body>
+</html>
