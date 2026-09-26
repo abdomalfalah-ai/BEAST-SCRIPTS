@@ -1,8 +1,8 @@
 {
   "name": "beast-scripts-desktop",
   "productName": "Beast Scripts",
-  "version": "1.0.0",
-  "description": "Beast Coaching AI Script Writer (desktop)",
+  "version": "2.0.0",
+  "description": "Beast Coaching AI Script Writer (offline desktop app)",
   "author": "Beast Coaching",
   "main": "main.js",
   "private": true,
@@ -17,8 +17,14 @@
   "build": {
     "appId": "com.beastcoaching.scripts",
     "productName": "Beast Scripts",
-    "files": ["main.js", "offline.html", "icon.png"],
-    "directories": { "output": "dist" },
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.png"
+    ],
+    "directories": {
+      "output": "dist"
+    },
     "win": {
       "target": "nsis",
       "icon": "icon.png"
@@ -28,6 +34,12 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "artifactName": "Beast-Scripts-Setup-${version}.${ext}"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "../public",
+        "to": "public"
+      }
+    ]
   }
 }
