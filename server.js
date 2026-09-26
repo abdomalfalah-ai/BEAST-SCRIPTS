@@ -37,6 +37,7 @@ setInterval(() => {
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/reel", express.static(path.join(__dirname, "reel-maker", "builder")));
 
 // ─── Groq Streaming API endpoint ───
 app.post("/api/generate", rateLimit, async (req, res) => {

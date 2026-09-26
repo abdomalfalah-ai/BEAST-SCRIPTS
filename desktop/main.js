@@ -13,6 +13,10 @@ const APP_ORIGIN = "beast://app";
 const PUBLIC_DIR = app.isPackaged
   ? path.join(process.resourcesPath, "public")
   : path.join(__dirname, "..", "public");
+// The Reel Builder, served at beast://app/reel/
+const REEL_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, "reel")
+  : path.join(__dirname, "..", "reel-maker", "builder");
 
 // ─── Settings (stored in the user's AppData folder) ───
 const DEFAULTS = {
@@ -156,9 +160,17 @@ async function handleGenerate(request) {
 }
 
 function serveFile(pathname) {
-  const rel = decodeURIComponent(pathname).replace(/^\/+/, "") || "index.html";
-  const file = path.normalize(path.join(PUBLIC_DIR, rel));
-  if (!file.startsWith(PUBLIC_DIR + path.sep) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+  let rel = decodeURIComponent(pathname).replace(/^\/+/, "");
+  let root = PUBLIC_DIR;
+  if (rel === "reel" || rel.startsWith("reel/")) {
+    root = REEL_DIR;
+    rel = rel.slice(5);
+  }
+  let file = path.normalize(path.join(root, rel || "index.html"));
+  if (file.startsWith(root + path.sep) && fs.existsSync(file) && fs.statSync(file).isDirectory()) {
+    file = path.join(file, "index.html");
+  }
+  if (!file.startsWith(root + path.sep) || !fs.existsSync(file)) {
     return net.fetch(pathToFileURL(path.join(PUBLIC_DIR, "index.html")).toString());
   }
   return net.fetch(pathToFileURL(file).toString());
