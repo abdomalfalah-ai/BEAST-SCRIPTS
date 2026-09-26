@@ -146,6 +146,9 @@ const INTENSITIES = [
   { label:"🫀", value:"عاطفي ومؤثر مع رسالة قوية", desc:"Emotional" },
 ];
 
+// Set by desktop/preload.js when running inside the Windows app
+const IS_DESKTOP = !!window.beastDesktop;
+
 // ─── STATE ───
 let state = {
   view: "home",
@@ -165,6 +168,8 @@ let state = {
   error: "",
   toast: null,
   historyFilter: "all",
+  settings: null,
+  settingsDraft: { groqKey: "", ollamaModel: "" },
 };
 
 // ─── STORAGE ───
@@ -257,6 +262,10 @@ function buildPrompt(topic) {
   return parts.join("\n");
 }
 
+function esc(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function haptic() {
   if (navigator.vibrate) navigator.vibrate(10);
 }
@@ -292,9 +301,12 @@ async function generateScript() {
         errMsg = errData.error || errMsg;
       } catch(e) {}
 
-      if (resp.status === 401) errMsg = "Invalid API key. Please update GROQ_API_KEY in Render environment settings.";
-      else if (resp.status === 429) errMsg = "Rate limit reached. Please wait a moment and try again.";
-      else if (resp.status === 500) errMsg = "Server error. Please check that GROQ_API_KEY is set in Render.";
+      // The desktop app already sends a specific message; these hints are for the Render site
+      if (!IS_DESKTOP) {
+        if (resp.status === 401) errMsg = "Invalid API key. Please update GROQ_API_KEY in Render environment settings.";
+        else if (resp.status === 429) errMsg = "Rate limit reached. Please wait a moment and try again.";
+        else if (resp.status === 500) errMsg = "Server error. Please check that GROQ_API_KEY is set in Render.";
+      }
 
       throw new Error(errMsg);
     }
@@ -391,6 +403,7 @@ function renderApp() {
   else if (state.view === "generate") content = renderGenerate();
   else if (state.view === "result") content = renderResult();
   else if (state.view === "history") content = renderHistory();
+  else if (state.view === "settings") content = renderSettings();
 
   return `
     ${renderHeader()}
@@ -404,6 +417,7 @@ function renderApp() {
 
 function renderHeader() {
   const historyBtn = `<button onclick="nav('${state.view==="history"?"home":"history"}')" style="background:${state.view==="history"?"#FF4500":"#1e1e1e"};border:1px solid ${state.view==="history"?"#FF4500":"#2a2a2a"};color:${state.view==="history"?"#fff":"#f0f0f0"};border-radius:10px;padding:8px 14px;font-size:13px;">History</button>`;
+  const settingsBtn = IS_DESKTOP ? `<button onclick="nav('${state.view==="settings"?"home":"settings"}')" title="Settings" style="background:${state.view==="settings"?"#FF4500":"#1e1e1e"};border:1px solid ${state.view==="settings"?"#FF4500":"#2a2a2a"};color:#f0f0f0;border-radius:10px;padding:8px 12px;font-size:13px;">⚙️</button>` : "";
   const backBtn = state.view !== "home" ? `<button onclick="nav('home')" style="background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;border-radius:10px;padding:8px 14px;font-size:13px;">Home</button>` : "";
 
   return `
@@ -412,7 +426,7 @@ function renderHeader() {
         <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,#FF4500,#DC143C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;">BEAST SCRIPTS</div>
         <div style="font-size:11px;color:#888;letter-spacing:1px;text-transform:uppercase;">Coach Abdelrahman</div>
       </div>
-      <div style="display:flex;gap:8px;">${backBtn}${historyBtn}</div>
+      <div style="display:flex;gap:8px;">${backBtn}${historyBtn}${settingsBtn}</div>
     </div>
   `;
 }
@@ -657,6 +671,53 @@ function renderHistory() {
   `;
 }
 
+function renderSettings() {
+  const s = state.settings;
+  if (!s) return "";
+  const d = state.settingsDraft;
+  const card = (id, icon, title, desc) => {
+    const sel = s.provider === id;
+    return `<button onclick="setProvider('${id}')" style="flex:1;text-align:left;padding:16px;border-radius:14px;border:${sel?'2px solid #FF4500':'1px solid #2a2a2a'};background:${sel?'#FF450015':'#141414'};color:#f0f0f0;display:flex;flex-direction:column;gap:6px;">
+      <span style="font-size:24px;">${icon}</span>
+      <span style="font-size:15px;font-weight:800;">${title}</span>
+      <span style="font-size:12px;color:#888;line-height:1.5;">${desc}</span>
+    </button>`;
+  };
+  const input = (id, value, placeholder, type) => `<input id="${id}" type="${type||'text'}" value="${esc(value)}" placeholder="${esc(placeholder)}" oninput="state.settingsDraft.${id}=this.value" style="width:100%;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;padding:14px;color:#f0f0f0;font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;" />`;
+  const step = (n, html) => `<div style="display:flex;gap:10px;margin-bottom:10px;font-size:13px;color:#bbb;line-height:1.6;"><span style="flex:none;width:22px;height:22px;border-radius:50%;background:#FF450030;color:#FF4500;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:12px;">${n}</span><span>${html}</span></div>`;
+  const code = (t) => `<code style="background:#1e1e1e;border:1px solid #2a2a2a;border-radius:6px;padding:2px 6px;font-size:12px;color:#f0f0f0;">${esc(t)}</code>`;
+
+  const groqPanel = `
+    ${step(1, `Create a free account at <a href="https://console.groq.com/keys" target="_blank" style="color:#FF4500;">console.groq.com/keys</a>`)}
+    ${step(2, `Click <b>Create API Key</b>, copy it, and paste it below`)}
+    ${input("groqKey", d.groqKey, s.hasGroqKey ? "Key saved ✓ (paste a new one to replace it)" : "gsk_...", "password")}
+    <div style="font-size:12px;color:#666;margin-bottom:4px;">Free, no card needed. Uses the internet. Best Arabic quality. The key stays on this PC, encrypted.</div>
+  `;
+  const ollamaPanel = `
+    ${step(1, `Install Ollama (free) from <a href="https://ollama.com/download" target="_blank" style="color:#FF4500;">ollama.com/download</a>`)}
+    ${step(2, `Open Command Prompt and run ${code("ollama pull " + (d.ollamaModel || s.ollamaModel))} (one-time download, about 5 GB)`)}
+    ${step(3, `Keep Ollama running. After that, no internet is needed.`)}
+    <label style="display:block;font-size:12px;font-weight:700;margin:6px 0 8px;color:#888;">Model</label>
+    ${input("ollamaModel", d.ollamaModel || s.ollamaModel, "qwen2.5:7b")}
+    <div style="font-size:12px;color:#666;margin-bottom:4px;">Works fully offline. Needs a decent PC (16 GB RAM recommended). Arabic is weaker than Groq and it's slower without a graphics card.</div>
+  `;
+
+  return `
+    <div class="content" style="padding:20px 20px;">
+      <h2 style="font-size:22px;font-weight:900;padding:20px 0 6px;">Settings</h2>
+      <p style="font-size:13px;color:#888;margin-bottom:20px;">Choose which AI writes your scripts. Both are free.</p>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        ${card("groq", "☁️", "Groq", "Free online AI. Needs internet.")}
+        ${card("ollama", "💻", "Local AI", "Runs on this PC. Fully offline.")}
+      </div>
+      <div style="background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:18px;margin-bottom:20px;">
+        ${s.provider === "ollama" ? ollamaPanel : groqPanel}
+      </div>
+      <button onclick="saveSettings()" style="width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF4500,#DC143C);color:#fff;font-size:16px;font-weight:900;">Save</button>
+    </div>
+  `;
+}
+
 // ─── ACTIONS ───
 function nav(view) { state.view = view; render(); window.scrollTo(0,0); haptic(); }
 function selectTemplate(i) { state.selectedTemplate = TEMPLATES[i]; state.view = "generate"; state.error = ""; render(); window.scrollTo(0,0); haptic(); }
@@ -666,6 +727,20 @@ function setHook(i) { state.hook = HOOKS[i]; render(); haptic(); }
 function setFormat(i) { state.format = FORMATS[i]; render(); haptic(); }
 function toggleOption(key) { state[key] = !state[key]; render(); haptic(); }
 function regenerate() { state.generatedScript = ""; state.error = ""; state.view = "generate"; render(); }
+
+async function setProvider(provider) {
+  state.settings = await window.beastDesktop.saveSettings({ provider });
+  render();
+  haptic();
+}
+
+async function saveSettings() {
+  const d = state.settingsDraft;
+  state.settings = await window.beastDesktop.saveSettings({ groqKey: d.groqKey, ollamaModel: d.ollamaModel });
+  state.settingsDraft = { groqKey: "", ollamaModel: "" };
+  showToast("Saved");
+  haptic();
+}
 
 function viewHistoryItem(i, fromFavorites) {
   const list = fromFavorites ? state.history.filter(h => isFavorite(h.id)) : state.history;
@@ -712,7 +787,7 @@ function bindEvents() {
 }
 
 // ─── SERVICE WORKER ───
-if ('serviceWorker' in navigator) {
+if (!IS_DESKTOP && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(() => {
     console.log('SW registered');
   }).catch(e => console.log('SW failed', e));
@@ -721,6 +796,15 @@ if ('serviceWorker' in navigator) {
 // ─── INIT ───
 loadHistory();
 render();
+
+// Desktop: load AI settings, and open Settings first if nothing is set up yet
+if (IS_DESKTOP) {
+  window.beastDesktop.getSettings().then((s) => {
+    state.settings = s;
+    if (s.provider === "groq" && !s.hasGroqKey) state.view = "settings";
+    render();
+  });
+}
 </script>
 
 </body>
