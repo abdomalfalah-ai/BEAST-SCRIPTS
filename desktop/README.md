@@ -43,7 +43,8 @@ The installer isn't code-signed, so Windows SmartScreen will warn the first time
 ```
 cd desktop
 npm install
-npm run build-captions   # download + build the pinned Tscaps once (needs git and corepack/pnpm)
+corepack enable          # once per machine: Tscaps' install calls `pnpm`
+npm run build-captions   # download + build the pinned Tscaps (needs git)
 npm start                # run the app (uses ../public for the screens)
 npm run dist             # build the Windows installer (on Windows)
 ```

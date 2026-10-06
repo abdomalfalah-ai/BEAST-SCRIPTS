@@ -25,7 +25,9 @@ jobs:
 
       - run: npm ci
 
-      # Tscaps auto-captions editor, pinned in scripts/build-captions.mjs
+      # Tscaps auto-captions editor, pinned in scripts/build-captions.mjs.
+      # Its install hooks call `pnpm` by name, so corepack's shim must be on PATH.
+      - run: corepack enable
       - run: node scripts/build-captions.mjs
 
       - run: npx electron-builder --win nsis --x64 --publish never
