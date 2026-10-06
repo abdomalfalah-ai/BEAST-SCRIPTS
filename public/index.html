@@ -449,8 +449,29 @@ function renderHome() {
         <p style="font-size:14px;color:#888;margin:0;line-height:1.6;">${BRAND.tagline}</p>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${cards}</div>
+      ${renderTools()}
     </div>
   `;
+}
+
+// Video tools next to the script writer. Auto Captions (Tscaps) ships inside
+// the desktop app; on the website it opens the hosted tscaps.io.
+function renderTools() {
+  const tool = (icon, title, desc, onclick) => `
+    <button onclick="${onclick}" style="background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:16px;text-align:left;display:flex;align-items:center;gap:12px;color:#f0f0f0;">
+      <span style="font-size:26px;">${icon}</span>
+      <span style="display:flex;flex-direction:column;gap:3px;">
+        <span style="font-size:15px;font-weight:800;">${title}</span>
+        <span style="font-size:11px;color:#888;line-height:1.4;">${desc}</span>
+      </span>
+    </button>`;
+  const captionsOpen = IS_DESKTOP ? "location.href='/captions/'" : "window.open('https://tscaps.io','_blank')";
+  return `
+    <div style="font-size:12px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin:28px 0 12px;">Video Tools</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      ${tool("🎬", "Reel Builder", "Workout clips into a 30-second reel", "location.href='/reel/'")}
+      ${tool("💬", "Auto Captions", "Arabic subtitles from your voice", captionsOpen)}
+    </div>`;
 }
 
 function renderGenerate() {
