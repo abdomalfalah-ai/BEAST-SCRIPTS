@@ -17,6 +17,10 @@ const PUBLIC_DIR = app.isPackaged
 const REEL_DIR = app.isPackaged
   ? path.join(process.resourcesPath, "reel")
   : path.join(__dirname, "..", "reel-maker", "builder");
+// The Tscaps caption editor, served at beast://app/captions/ (built by scripts/build-captions.mjs)
+const CAPTIONS_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, "captions")
+  : path.join(__dirname, "captions-dist");
 
 // ─── Settings (stored in the user's AppData folder) ───
 const DEFAULTS = {
@@ -159,21 +163,40 @@ async function handleGenerate(request) {
   return new Response(stream, { headers: { "Content-Type": "text/event-stream" } });
 }
 
+// Tscaps runs its speech model on threaded WebAssembly, which needs a
+// cross-origin-isolated page: the same two headers its own nginx config sends.
+async function withIsolation(responsePromise) {
+  const res = await responsePromise;
+  const headers = new Headers(res.headers);
+  headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  headers.set("Cross-Origin-Embedder-Policy", "credentialless");
+  return new Response(res.body, { status: res.status, headers });
+}
+
 function serveFile(pathname) {
   let rel = decodeURIComponent(pathname).replace(/^\/+/, "");
   let root = PUBLIC_DIR;
+  let isCaptions = false;
   if (rel === "reel" || rel.startsWith("reel/")) {
     root = REEL_DIR;
     rel = rel.slice(5);
+  } else if (rel === "captions" || rel.startsWith("captions/")) {
+    root = CAPTIONS_DIR;
+    rel = rel.slice(9);
+    isCaptions = true;
   }
   let file = path.normalize(path.join(root, rel || "index.html"));
   if (file.startsWith(root + path.sep) && fs.existsSync(file) && fs.statSync(file).isDirectory()) {
     file = path.join(file, "index.html");
   }
   if (!file.startsWith(root + path.sep) || !fs.existsSync(file)) {
-    return net.fetch(pathToFileURL(path.join(PUBLIC_DIR, "index.html")).toString());
+    // Tscaps is a single-page app: its own routes fall back to its index.html
+    file = isCaptions && fs.existsSync(path.join(CAPTIONS_DIR, "index.html"))
+      ? path.join(CAPTIONS_DIR, "index.html")
+      : path.join(PUBLIC_DIR, "index.html");
   }
-  return net.fetch(pathToFileURL(file).toString());
+  const res = net.fetch(pathToFileURL(file).toString());
+  return isCaptions ? withIsolation(res) : res;
 }
 
 // ─── Window ───
@@ -209,6 +232,16 @@ function createWindow() {
     if (!url.startsWith(APP_ORIGIN)) {
       event.preventDefault();
       if (url.startsWith("https://") || url.startsWith("http://")) shell.openExternal(url);
+    }
+  });
+
+  // Tscaps is a full desktop-width editor: widen the window when it opens
+  win.webContents.on("did-navigate", (_e, url) => {
+    if (!url.startsWith(`${APP_ORIGIN}/captions`) || win.isMaximized()) return;
+    const [w, h] = win.getSize();
+    if (w < 1200) {
+      win.setSize(1280, Math.max(h, 820));
+      win.center();
     }
   });
 

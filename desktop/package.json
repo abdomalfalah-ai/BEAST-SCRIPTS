@@ -8,7 +8,8 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis"
+    "dist": "node scripts/build-captions.mjs && electron-builder --win nsis",
+    "build-captions": "node scripts/build-captions.mjs"
   },
   "devDependencies": {
     "electron": "^44.0.0",
@@ -43,6 +44,10 @@
       {
         "from": "../reel-maker/builder",
         "to": "reel"
+      },
+      {
+        "from": "captions-dist",
+        "to": "captions"
       }
     ]
   }

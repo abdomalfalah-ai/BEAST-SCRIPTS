@@ -25,6 +25,9 @@ jobs:
 
       - run: npm ci
 
+      # Tscaps auto-captions editor, pinned in scripts/build-captions.mjs
+      - run: node scripts/build-captions.mjs
+
       - run: npx electron-builder --win nsis --x64 --publish never
 
       - uses: actions/upload-artifact@v4

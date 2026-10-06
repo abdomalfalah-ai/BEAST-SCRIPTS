@@ -3,8 +3,18 @@
 A standalone desktop app. It carries its own copy of the Beast Scripts screens and talks to the AI directly,
 so there is no server and no hosting bill. Scripts, history and favorites are saved on your PC.
 
-It also includes the **🎬 Reel Builder** (from `reel-maker/builder`): open it from the Reels button in the header.
-It turns your workout clips into a 30-second reel entirely on your PC, with no AI and no internet needed.
+Two video tools sit under **Video Tools** on the home screen:
+
+- **🎬 Reel Builder** (from `reel-maker/builder`) turns your workout clips into a 30-second reel, entirely on your PC.
+- **💬 Auto Captions** is [Tscaps](https://github.com/francozanardi/tscaps), bundled unmodified. Drop in a video,
+  it transcribes your voice with Whisper on your PC and burns styled Arabic captions into the MP4.
+  The first transcription downloads the speech model once (internet needed that one time); after that it works offline.
+  For Egyptian Arabic, pick the **small** or **medium** model; the tiny ones make many mistakes.
+
+### Tscaps license
+The Tscaps editor is AGPL-3.0 (its engine and templates are MIT). It is built unmodified from the commit pinned in
+`scripts/build-captions.mjs`, and the installer carries `captions/SOURCE.txt` pointing to that exact source.
+If you ever change Tscaps itself, you must publish your changed source too.
 
 ## Pick an AI (both free)
 
@@ -33,6 +43,7 @@ The installer isn't code-signed, so Windows SmartScreen will warn the first time
 ```
 cd desktop
 npm install
-npm start      # run the app (uses ../public for the screens)
-npm run dist   # build the Windows installer (on Windows)
+npm run build-captions   # download + build the pinned Tscaps once (needs git and corepack/pnpm)
+npm start                # run the app (uses ../public for the screens)
+npm run dist             # build the Windows installer (on Windows)
 ```

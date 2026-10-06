@@ -1,2 +1,4 @@
 node_modules/
 dist/
+desktop/.tscaps-src/
+desktop/captions-dist/

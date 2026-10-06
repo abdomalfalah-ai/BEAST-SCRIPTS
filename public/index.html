@@ -418,7 +418,6 @@ function renderApp() {
 function renderHeader() {
   const historyBtn = `<button onclick="nav('${state.view==="history"?"home":"history"}')" style="background:${state.view==="history"?"#FF4500":"#1e1e1e"};border:1px solid ${state.view==="history"?"#FF4500":"#2a2a2a"};color:${state.view==="history"?"#fff":"#f0f0f0"};border-radius:10px;padding:8px 14px;font-size:13px;">History</button>`;
   const settingsBtn = IS_DESKTOP ? `<button onclick="nav('${state.view==="settings"?"home":"settings"}')" title="Settings" style="background:${state.view==="settings"?"#FF4500":"#1e1e1e"};border:1px solid ${state.view==="settings"?"#FF4500":"#2a2a2a"};color:#f0f0f0;border-radius:10px;padding:8px 12px;font-size:13px;">⚙️</button>` : "";
-  const reelsBtn = `<button onclick="location.href='/reel/'" title="Reel Builder" style="background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;border-radius:10px;padding:8px 12px;font-size:13px;">🎬 Reels</button>`;
   const backBtn = state.view !== "home" ? `<button onclick="nav('home')" style="background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;border-radius:10px;padding:8px 14px;font-size:13px;">Home</button>` : "";
 
   return `
@@ -427,7 +426,7 @@ function renderHeader() {
         <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,#FF4500,#DC143C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1.2;">BEAST SCRIPTS</div>
         <div style="font-size:11px;color:#888;letter-spacing:1px;text-transform:uppercase;">Coach Abdelrahman</div>
       </div>
-      <div style="display:flex;gap:8px;">${backBtn}${reelsBtn}${historyBtn}${settingsBtn}</div>
+      <div style="display:flex;gap:8px;">${backBtn}${historyBtn}${settingsBtn}</div>
     </div>
   `;
 }
@@ -450,8 +449,29 @@ function renderHome() {
         <p style="font-size:14px;color:#888;margin:0;line-height:1.6;">${BRAND.tagline}</p>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">${cards}</div>
+      ${renderTools()}
     </div>
   `;
+}
+
+// Video tools next to the script writer. Auto Captions (Tscaps) ships inside
+// the desktop app; on the website it opens the hosted tscaps.io.
+function renderTools() {
+  const tool = (icon, title, desc, onclick) => `
+    <button onclick="${onclick}" style="background:#141414;border:1px solid #2a2a2a;border-radius:16px;padding:16px;text-align:left;display:flex;align-items:center;gap:12px;color:#f0f0f0;">
+      <span style="font-size:26px;">${icon}</span>
+      <span style="display:flex;flex-direction:column;gap:3px;">
+        <span style="font-size:15px;font-weight:800;">${title}</span>
+        <span style="font-size:11px;color:#888;line-height:1.4;">${desc}</span>
+      </span>
+    </button>`;
+  const captionsOpen = IS_DESKTOP ? "location.href='/captions/'" : "window.open('https://tscaps.io','_blank')";
+  return `
+    <div style="font-size:12px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin:28px 0 12px;">Video Tools</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      ${tool("🎬", "Reel Builder", "Workout clips into a 30-second reel", "location.href='/reel/'")}
+      ${tool("💬", "Auto Captions", "Arabic subtitles from your voice", captionsOpen)}
+    </div>`;
 }
 
 function renderGenerate() {
